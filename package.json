@@ -1,0 +1,33 @@
+{
+  "name": "@agenticdataprotocol/specification",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Agentic Data Protocol (ADP) specification and protocol schema",
+  "license": "Apache-2.0",
+  "author": "ADP Contributors",
+  "homepage": "https://github.com/agenticdataprotocol/specification",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "npm run check:schema",
+    "check:schema": "npm run check:schema:ts && npm run check:schema:json",
+    "check:schema:ts": "tsc --noEmit && eslint schema/ && prettier --check \"schema/**/*.ts\"",
+    "check:schema:json": "tsx scripts/generate-schemas.ts --check",
+    "generate:schema": "npm run generate:schema:json",
+    "generate:schema:json": "tsx scripts/generate-schemas.ts",
+    "format": "prettier --write \"**/*.{ts,md,json}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.0.0",
+    "typescript-json-schema": "^0.65.1"
+  }
+}
