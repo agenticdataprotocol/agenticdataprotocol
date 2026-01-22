@@ -16,10 +16,7 @@
  *
  * @category JSON-RPC
  */
-export type JSONRPCMessage =
-  | JSONRPCRequest
-  | JSONRPCNotification
-  | JSONRPCResponse;
+export type JSONRPCMessage = JSONRPCRequest | JSONRPCResponse;
 
 /** @internal */
 export const LATEST_PROTOCOL_VERSION = "2026-01-20";
@@ -74,21 +71,6 @@ export interface Request {
   params?: { [key: string]: unknown };
 }
 
-/** @internal */
-export interface NotificationParams {
-  /**
-   * See [General fields] for notes on `_meta` usage.
-   */
-  _meta?: { [key: string]: unknown };
-  [key: string]: unknown;
-}
-
-/** @internal */
-export interface Notification {
-  method: string;
-  params?: { [key: string]: unknown };
-}
-
 /**
  * Common result type for all successful responses.
  *
@@ -130,15 +112,6 @@ export interface JSONRPCError {
 export interface JSONRPCRequest extends Request {
   jsonrpc: typeof JSONRPC_VERSION;
   id: RequestId;
-}
-
-/**
- * A notification which does not expect a response.
- *
- * @category JSON-RPC
- */
-export interface JSONRPCNotification extends Notification {
-  jsonrpc: typeof JSONRPC_VERSION;
 }
 
 /**
@@ -195,7 +168,7 @@ export const EXECUTION_FAILED = -32004;
  *
  * @category Common Types
  */
-export type QualifiedId = string;
+export type ResourceId = string;
 
 /**
  * A unique identifier for tracing and debugging purposes.
@@ -213,10 +186,8 @@ export type TraceId = string;
 export type IntentCategory = "READ" | "WRITE" | "COGNITIVE";
 
 /**
- * Intent classes define the type of operation an Agent intends to perform.
- *
  * READ operations:
- * - `IDENTIFY` - Retrieve a single entity by unique key
+ * - `LOOKUP` - Retrieve a single entity by unique key
  * - `QUERY` - Retrieve a set of entities using boolean predicates
  *
  * WRITE operations:
@@ -229,7 +200,7 @@ export type IntentCategory = "READ" | "WRITE" | "COGNITIVE";
  * @category Common Types
  */
 export type IntentClass =
-  | "IDENTIFY"
+  | "LOOKUP"
   | "QUERY"
   | "INGEST"
   | "REVISE"
@@ -249,7 +220,12 @@ export type PredicateOperator =
   | "GTE" // Greater than or equal
   | "LTE" // Less than or equal
   | "CONTAINS" // Contains substring or element
-  | "IN"; // Value in set
+  | "IN" // Value in set
+  | "LIKE" // Simple pattern match (case-sensitive)
+  | "ILIKE" // Simple pattern match (case-insensitive)
+  | "COSINE_DISTANCE" // Vector cosine distance
+  | "L2_DISTANCE" // Vector Euclidean distance
+  | "INNER_PRODUCT"; // Vector inner product
 
 /**
  * Severity levels for validation issues.
@@ -298,6 +274,11 @@ export interface Predicate {
  * Describes the ADP implementation.
  *
  * @category `adp.initialize`
+ * @example
+ * {
+ *   "name": "Gravitino-ADP-Gateway",
+ *   "version": "0.8.0-incubating"
+ * }
  */
 export interface Implementation {
   /**
@@ -315,6 +296,12 @@ export interface Implementation {
  * Capabilities a client may support.
  *
  * @category `adp.initialize`
+ * @example
+ * {
+ *   "experimental": {
+ *     "customFeature": { "enabled": true }
+ *   }
+ * }
  */
 export interface ClientCapabilities {
   /**
@@ -399,16 +386,6 @@ export interface InitializeResult extends Result {
   instructions?: string;
 }
 
-/**
- * This notification is sent from the client to the server after initialization has finished.
- *
- * @category `notifications.initialized`
- */
-export interface InitializedNotification extends JSONRPCNotification {
-  method: "notifications.initialized";
-  params?: NotificationParams;
-}
-
 /* ============================================================================
  * Ping
  * ============================================================================ */
@@ -429,78 +406,6 @@ export interface PingRequest extends JSONRPCRequest {
  * @category Common Types
  */
 export type EmptyResult = Result;
-
-/* ============================================================================
- * Progress Notifications
- * ============================================================================ */
-
-/**
- * Parameters for a `notifications.progress` notification.
- *
- * @category `notifications.progress`
- */
-export interface ProgressNotificationParams extends NotificationParams {
-  /**
-   * The progress token which was given in the initial request.
-   */
-  progressToken: ProgressToken;
-
-  /**
-   * The progress thus far.
-   */
-  progress: number;
-
-  /**
-   * Total number of items to process, if known.
-   */
-  total?: number;
-
-  /**
-   * An optional message describing the current progress.
-   */
-  message?: string;
-}
-
-/**
- * An out-of-band notification used to inform the receiver of a progress update.
- *
- * @category `notifications.progress`
- */
-export interface ProgressNotification extends JSONRPCNotification {
-  method: "notifications.progress";
-  params: ProgressNotificationParams;
-}
-
-/* ============================================================================
- * Cancellation
- * ============================================================================ */
-
-/**
- * Parameters for a `notifications.cancelled` notification.
- *
- * @category `notifications.cancelled`
- */
-export interface CancelledNotificationParams extends NotificationParams {
-  /**
-   * The ID of the request to cancel.
-   */
-  requestId: RequestId;
-
-  /**
-   * An optional string describing the reason for the cancellation.
-   */
-  reason?: string;
-}
-
-/**
- * This notification can be sent by either side to indicate that it is cancelling a previously-issued request.
- *
- * @category `notifications.cancelled`
- */
-export interface CancelledNotification extends JSONRPCNotification {
-  method: "notifications.cancelled";
-  params: CancelledNotificationParams;
-}
 
 /* ============================================================================
  * Pagination
@@ -588,7 +493,7 @@ export interface Resource {
   /**
    * The unique domain-qualified identifier for this resource.
    */
-  qualifiedId: QualifiedId;
+  qualifiedId: ResourceId;
 
   /**
    * The version of this resource's schema.
@@ -806,7 +711,7 @@ export interface DescribeRequestParams extends PaginatedRequestParams {
   /**
    * The unique identifier of the resource to describe.
    */
-  qualifiedId: QualifiedId;
+  qualifiedId: ResourceId;
 
   /**
    * The intent class the Agent plans to use.
@@ -833,7 +738,7 @@ export interface DescribeResult extends PaginatedResult {
   /**
    * The resource's qualified identifier.
    */
-  qualifiedId: QualifiedId;
+  qualifiedId: ResourceId;
 
   /**
    * The resource's schema version.
@@ -856,15 +761,32 @@ export interface DescribeResult extends PaginatedResult {
  * ============================================================================ */
 
 /**
- * The Intent IR structure used in VALIDATE and EXECUTE operations.
+ * Intent for retrieving a single entity by its unique identifier.
  *
  * @category Common Types
  */
-export interface IntentIR {
+export interface LookupIntent {
+  intentClass: "LOOKUP";
+
   /**
-   * The intent class for this operation.
+   * The unique resource ID to lookup.
+   * If not provided, it may be inferred from context or `QualifiedId` in the request.
    */
-  intentClass: IntentClass;
+  resourceId?: ResourceId;
+
+  /**
+   * Fields to select.
+   */
+  selection?: string[];
+}
+
+/**
+ * Intent for retrieving a set of entities based on criteria.
+ *
+ * @category Common Types
+ */
+export interface QueryIntent {
+  intentClass: "QUERY";
 
   /**
    * Predicates for filtering data.
@@ -872,10 +794,86 @@ export interface IntentIR {
   predicates: Predicate[];
 
   /**
-   * Fields to project/select in the result.
+   * Fields to select.
    */
   selection?: string[];
+
+  /**
+   * Fields to order results by.
+   * Format: "fieldName" (asc) or "-fieldName" (desc).
+   */
+  orderBy?: string[];
+
+  /**
+   * Fields to group results by.
+   */
+  groupBy?: string[];
 }
+
+/**
+ * Intent for creating or appending new data.
+ *
+ * @category Common Types
+ */
+export interface IngestIntent {
+  intentClass: "INGEST";
+
+  /**
+   * The data payload to ingest.
+   * An array of records (key-value maps).
+   */
+  payload: Record<string, unknown>[];
+}
+
+/**
+ * Intent for updating existing data.
+ *
+ * @category Common Types
+ */
+export interface ReviseIntent {
+  intentClass: "REVISE";
+
+  /**
+   * Predicates to identify the records to update.
+   */
+  predicates: Predicate[];
+
+  /**
+   * The data payload containing the fields to update.
+   */
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Intent for transforming unstructured data into structured form.
+ *
+ * @category Common Types
+ */
+export interface SynthesizeIntent {
+  intentClass: "SYNTHESIZE";
+
+  /**
+   * Description of the desired structure or question to answer.
+   */
+  instruction: string;
+
+  /**
+   * Optional context data or references.
+   */
+  context?: unknown;
+}
+
+/**
+ * The Intent structure used in VALIDATE and EXECUTE operations.
+ *
+ * @category Common Types
+ */
+export type Intent =
+  | LookupIntent
+  | QueryIntent
+  | IngestIntent
+  | ReviseIntent
+  | SynthesizeIntent;
 
 /**
  * Validation issue codes.
@@ -932,12 +930,12 @@ export interface ValidateRequestParams extends RequestParams {
   /**
    * The resource to validate against.
    */
-  qualifiedId: QualifiedId;
+  qualifiedId: ResourceId;
 
   /**
-   * The Intent IR to validate.
+   * The Intent to validate.
    */
-  intentIR: IntentIR;
+  intent: Intent;
 }
 
 /**
@@ -980,12 +978,12 @@ export interface ExecuteRequestParams extends PaginatedRequestParams {
   /**
    * The resource to execute against.
    */
-  qualifiedId: QualifiedId;
+  qualifiedId: ResourceId;
 
   /**
-   * The Intent IR to execute.
+   * The Intent to execute.
    */
-  intentIR: IntentIR;
+  intent: Intent;
 }
 
 /**

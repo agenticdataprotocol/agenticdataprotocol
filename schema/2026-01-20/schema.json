@@ -1,50 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$defs": {
-        "CancelledNotification": {
-            "description": "This notification can be sent by either side to indicate that it is cancelling a previously-issued request.",
-            "properties": {
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "notifications.cancelled",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/CancelledNotificationParams"
-                }
-            },
-            "required": [
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "CancelledNotificationParams": {
-            "description": "Parameters for a `notifications.cancelled` notification.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "reason": {
-                    "description": "An optional string describing the reason for the cancellation.",
-                    "type": "string"
-                },
-                "requestId": {
-                    "$ref": "#/$defs/RequestId",
-                    "description": "The ID of the request to cancel."
-                }
-            },
-            "required": [
-                "requestId"
-            ],
-            "type": "object"
-        },
         "Capabilities": {
             "description": "Capabilities available for a resource.",
             "properties": {
@@ -208,8 +164,8 @@
                 "intentClass": {
                     "description": "Filter resources by intent class.",
                     "enum": [
-                        "IDENTIFY",
                         "INGEST",
+                        "LOOKUP",
                         "QUERY",
                         "REVISE",
                         "SYNTHESIZE"
@@ -353,9 +309,9 @@
                     "description": "An opaque token representing the current pagination position.",
                     "type": "string"
                 },
-                "intentIR": {
-                    "$ref": "#/$defs/IntentIR",
-                    "description": "The Intent IR to execute."
+                "intent": {
+                    "$ref": "#/$defs/Intent",
+                    "description": "The Intent to execute."
                 },
                 "qualifiedId": {
                     "description": "The resource to execute against.",
@@ -363,7 +319,7 @@
                 }
             },
             "required": [
-                "intentIR",
+                "intent",
                 "qualifiedId"
             ],
             "type": "object"
@@ -500,6 +456,27 @@
             ],
             "type": "object"
         },
+        "IngestIntent": {
+            "description": "Intent for creating or appending new data.",
+            "properties": {
+                "intentClass": {
+                    "const": "INGEST",
+                    "type": "string"
+                },
+                "payload": {
+                    "description": "The data payload to ingest.\nAn array of records (key-value maps).",
+                    "items": {
+                        "$ref": "#/$defs/Record<string,unknown>"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "intentClass",
+                "payload"
+            ],
+            "type": "object"
+        },
         "InitializeRequest": {
             "description": "This request is sent from the client to the server when it first connects.",
             "properties": {
@@ -595,26 +572,25 @@
             ],
             "type": "object"
         },
-        "InitializedNotification": {
-            "description": "This notification is sent from the client to the server after initialization has finished.",
-            "properties": {
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
+        "Intent": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/LookupIntent"
                 },
-                "method": {
-                    "const": "notifications.initialized",
-                    "type": "string"
+                {
+                    "$ref": "#/$defs/QueryIntent"
                 },
-                "params": {
-                    "$ref": "#/$defs/NotificationParams"
+                {
+                    "$ref": "#/$defs/IngestIntent"
+                },
+                {
+                    "$ref": "#/$defs/ReviseIntent"
+                },
+                {
+                    "$ref": "#/$defs/SynthesizeIntent"
                 }
-            },
-            "required": [
-                "jsonrpc",
-                "method"
             ],
-            "type": "object"
+            "description": "The Intent structure used in VALIDATE and EXECUTE operations."
         },
         "IntentCategory": {
             "description": "The category of data operations supported by ADP.",
@@ -626,43 +602,15 @@
             "type": "string"
         },
         "IntentClass": {
-            "description": "Intent classes define the type of operation an Agent intends to perform.\n\nREAD operations:\n- `IDENTIFY` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
+            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
             "enum": [
-                "IDENTIFY",
                 "INGEST",
+                "LOOKUP",
                 "QUERY",
                 "REVISE",
                 "SYNTHESIZE"
             ],
             "type": "string"
-        },
-        "IntentIR": {
-            "description": "The Intent IR structure used in VALIDATE and EXECUTE operations.",
-            "properties": {
-                "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The intent class for this operation."
-                },
-                "predicates": {
-                    "description": "Predicates for filtering data.",
-                    "items": {
-                        "$ref": "#/$defs/Predicate"
-                    },
-                    "type": "array"
-                },
-                "selection": {
-                    "description": "Fields to project/select in the result.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "intentClass",
-                "predicates"
-            ],
-            "type": "object"
         },
         "IssueSeverity": {
             "description": "Severity levels for validation issues.\n\n- `BLOCKING` - Execution will fail; must be fixed\n- `WARNING` - Execution will proceed but with side effects",
@@ -723,9 +671,6 @@
                     "$ref": "#/$defs/JSONRPCRequest"
                 },
                 {
-                    "$ref": "#/$defs/JSONRPCNotification"
-                },
-                {
                     "$ref": "#/$defs/JSONRPCResultResponse"
                 },
                 {
@@ -733,27 +678,6 @@
                 }
             ],
             "description": "Refers to any valid JSON-RPC object that can be decoded off the wire, or encoded to be sent."
-        },
-        "JSONRPCNotification": {
-            "description": "A notification which does not expect a response.",
-            "properties": {
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "params": {
-                    "additionalProperties": {},
-                    "type": "object"
-                }
-            },
-            "required": [
-                "jsonrpc",
-                "method"
-            ],
-            "type": "object"
         },
         "JSONRPCRequest": {
             "description": "A request that expects a response.",
@@ -812,6 +736,30 @@
             ],
             "type": "object"
         },
+        "LookupIntent": {
+            "description": "Intent for retrieving a single entity by its unique identifier.",
+            "properties": {
+                "intentClass": {
+                    "const": "LOOKUP",
+                    "type": "string"
+                },
+                "resourceId": {
+                    "description": "The unique resource ID to lookup.\nIf not provided, it may be inferred from context or `QualifiedId` in the request.",
+                    "type": "string"
+                },
+                "selection": {
+                    "description": "Fields to select.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "intentClass"
+            ],
+            "type": "object"
+        },
         "MutableCapability": {
             "description": "Definition of a mutable field capability (for WRITE operations).",
             "properties": {
@@ -827,32 +775,6 @@
             "required": [
                 "fieldId"
             ],
-            "type": "object"
-        },
-        "Notification": {
-            "properties": {
-                "method": {
-                    "type": "string"
-                },
-                "params": {
-                    "additionalProperties": {},
-                    "type": "object"
-                }
-            },
-            "required": [
-                "method"
-            ],
-            "type": "object"
-        },
-        "NotificationParams": {
-            "additionalProperties": {},
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                }
-            },
             "type": "object"
         },
         "PaginatedRequestParams": {
@@ -991,10 +913,15 @@
             "description": "Operators supported for predicate expressions.",
             "enum": [
                 "CONTAINS",
+                "COSINE_DISTANCE",
                 "EQ",
                 "GT",
                 "GTE",
+                "ILIKE",
                 "IN",
+                "INNER_PRODUCT",
+                "L2_DISTANCE",
+                "LIKE",
                 "LT",
                 "LTE",
                 "NEQ"
@@ -1008,59 +935,6 @@
                 "REQUIRED"
             ],
             "type": "string"
-        },
-        "ProgressNotification": {
-            "description": "An out-of-band notification used to inform the receiver of a progress update.",
-            "properties": {
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "notifications.progress",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/ProgressNotificationParams"
-                }
-            },
-            "required": [
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "ProgressNotificationParams": {
-            "description": "Parameters for a `notifications.progress` notification.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "message": {
-                    "description": "An optional message describing the current progress.",
-                    "type": "string"
-                },
-                "progress": {
-                    "description": "The progress thus far.",
-                    "type": "integer"
-                },
-                "progressToken": {
-                    "$ref": "#/$defs/ProgressToken",
-                    "description": "The progress token which was given in the initial request."
-                },
-                "total": {
-                    "description": "Total number of items to process, if known.",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "progress",
-                "progressToken"
-            ],
-            "type": "object"
         },
         "ProgressToken": {
             "description": "A progress token, used to associate progress notifications with the original request.",
@@ -1082,9 +956,47 @@
             ],
             "type": "object"
         },
-        "QualifiedId": {
-            "description": "A domain-qualified entity identifier using the format `domain:alias`.\nThe domain prefix acts as a namespace to prevent collisions.",
-            "type": "string"
+        "QueryIntent": {
+            "description": "Intent for retrieving a set of entities based on criteria.",
+            "properties": {
+                "groupBy": {
+                    "description": "Fields to group results by.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "intentClass": {
+                    "const": "QUERY",
+                    "type": "string"
+                },
+                "orderBy": {
+                    "description": "Fields to order results by.\nFormat: \"fieldName\" (asc) or \"-fieldName\" (desc).",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "predicates": {
+                    "description": "Predicates for filtering data.",
+                    "items": {
+                        "$ref": "#/$defs/Predicate"
+                    },
+                    "type": "array"
+                },
+                "selection": {
+                    "description": "Fields to select.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "intentClass",
+                "predicates"
+            ],
+            "type": "object"
         },
         "Record<string,unknown>": {
             "type": "object"
@@ -1171,6 +1083,10 @@
             ],
             "type": "object"
         },
+        "ResourceId": {
+            "description": "A domain-qualified entity identifier using the format `domain:alias`.\nThe domain prefix acts as a namespace to prevent collisions.",
+            "type": "string"
+        },
         "Result": {
             "additionalProperties": {},
             "description": "Common result type for all successful responses.",
@@ -1181,6 +1097,32 @@
                     "type": "object"
                 }
             },
+            "type": "object"
+        },
+        "ReviseIntent": {
+            "description": "Intent for updating existing data.",
+            "properties": {
+                "intentClass": {
+                    "const": "REVISE",
+                    "type": "string"
+                },
+                "payload": {
+                    "$ref": "#/$defs/Record<string,unknown>",
+                    "description": "The data payload containing the fields to update."
+                },
+                "predicates": {
+                    "description": "Predicates to identify the records to update.",
+                    "items": {
+                        "$ref": "#/$defs/Predicate"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "intentClass",
+                "payload",
+                "predicates"
+            ],
             "type": "object"
         },
         "ServerCapabilities": {
@@ -1203,6 +1145,27 @@
                     "type": "array"
                 }
             },
+            "type": "object"
+        },
+        "SynthesizeIntent": {
+            "description": "Intent for transforming unstructured data into structured form.",
+            "properties": {
+                "context": {
+                    "description": "Optional context data or references."
+                },
+                "instruction": {
+                    "description": "Description of the desired structure or question to answer.",
+                    "type": "string"
+                },
+                "intentClass": {
+                    "const": "SYNTHESIZE",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "instruction",
+                "intentClass"
+            ],
             "type": "object"
         },
         "TraceId": {
@@ -1273,9 +1236,9 @@
                     },
                     "type": "object"
                 },
-                "intentIR": {
-                    "$ref": "#/$defs/IntentIR",
-                    "description": "The Intent IR to validate."
+                "intent": {
+                    "$ref": "#/$defs/Intent",
+                    "description": "The Intent to validate."
                 },
                 "qualifiedId": {
                     "description": "The resource to validate against.",
@@ -1283,7 +1246,7 @@
                 }
             },
             "required": [
-                "intentIR",
+                "intent",
                 "qualifiedId"
             ],
             "type": "object"

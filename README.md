@@ -30,7 +30,7 @@ ADP uses **JSON-RPC 2.0** as its transport format. All communication follows the
 
 | Category  | Intent       | Description                                        |
 | --------- | ------------ | -------------------------------------------------- |
-| READ      | `IDENTIFY`   | Retrieve single entity by unique key               |
+| READ      | `LOOKUP`     | Retrieve single entity by unique key               |
 | READ      | `QUERY`      | Retrieve entity set using boolean predicates       |
 | WRITE     | `INGEST`     | Create/append new data                             |
 | WRITE     | `REVISE`     | Update existing entries                            |
@@ -92,8 +92,8 @@ const executeReq: ExecuteRequest = {
   id: 3,
   method: "adp.execute",
   params: {
-    qualifiedId: "com.acme.finance:bank_failures",
-    intentIR: {
+    resourceId: "com.acme.finance:bank_failures",
+    intent: {
       intentClass: "QUERY",
       predicates: [{ field: "state_code", op: "EQ", value: "CA" }],
       selection: ["bank_name", "closing_date"],
