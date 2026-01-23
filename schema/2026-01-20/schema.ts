@@ -228,6 +228,13 @@ export type PredicateOperator =
   | "INNER_PRODUCT"; // Vector inner product
 
 /**
+ * Logic operators supported for predicate expressions.
+ *
+ * @category Common Types
+ */
+export type LogicOperator = "AND" | "OR" | "NOT";
+
+/**
  * Severity levels for validation issues.
  *
  * - `BLOCKING` - Execution will fail; must be fixed
@@ -251,9 +258,9 @@ export type ConsistencyLevel = "STRONG" | "EVENTUAL";
  */
 export interface Predicate {
   /**
-   * The field to filter on.
+   * The field identifier to filter on.
    */
-  field: string;
+  fieldId: string;
 
   /**
    * The comparison operator.
@@ -264,6 +271,44 @@ export interface Predicate {
    * The value to compare against.
    */
   value: string | number | boolean | (string | number | boolean)[];
+}
+
+
+/**
+ * A group of predicates with a logic operator.
+ *
+ * @category Common Types
+ * @example
+ * {
+ *   "op": "AND",
+ *   "predicates": [
+ *     { "field": "color", "op": "EQ", "value": "red" },
+ *     {
+ *       "op": "OR",
+ *       "predicates": [
+ *         { "field": "size", "op": "EQ", "value": "large" },
+ *         { "field": "size", "op": "EQ", "value": "small" }
+ *       ]
+ *     },
+ *     {
+ *       "op": "NOT",
+ *       "predicates": [
+ *         { "field": "color", "op": "EQ", "value": "green" }
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
+export interface PredicateGroup {
+  /**
+   * The logic operator to use.
+   */
+  op: LogicOperator;
+
+  /**
+   * The predicates to use. For "NOT" operator, the predicates should be a single predicate or predicate group.
+   */
+  predicates: (Predicate | PredicateGroup)[];
 }
 
 /* ============================================================================
@@ -493,7 +538,7 @@ export interface Resource {
   /**
    * The unique domain-qualified identifier for this resource.
    */
-  qualifiedId: ResourceId;
+  resourcedId: ResourceId;
 
   /**
    * The version of this resource's schema.
@@ -711,7 +756,7 @@ export interface DescribeRequestParams extends PaginatedRequestParams {
   /**
    * The unique identifier of the resource to describe.
    */
-  qualifiedId: ResourceId;
+  resourcedId: ResourceId;
 
   /**
    * The intent class the Agent plans to use.
@@ -736,9 +781,9 @@ export interface DescribeRequest extends JSONRPCRequest {
  */
 export interface DescribeResult extends PaginatedResult {
   /**
-   * The resource's qualified identifier.
+   * The resource's full qualified identifier.
    */
-  qualifiedId: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The resource's schema version.
@@ -770,7 +815,7 @@ export interface LookupIntent {
 
   /**
    * The unique resource ID to lookup.
-   * If not provided, it may be inferred from context or `QualifiedId` in the request.
+   * If not provided, it may be inferred from context or `ResourceId` in the request.
    */
   resourceId?: ResourceId;
 
@@ -791,7 +836,7 @@ export interface QueryIntent {
   /**
    * Predicates for filtering data.
    */
-  predicates: Predicate[];
+  predicates: PredicateGroup;
 
   /**
    * Fields to select.
@@ -803,11 +848,6 @@ export interface QueryIntent {
    * Format: "fieldName" (asc) or "-fieldName" (desc).
    */
   orderBy?: string[];
-
-  /**
-   * Fields to group results by.
-   */
-  groupBy?: string[];
 }
 
 /**
@@ -836,7 +876,7 @@ export interface ReviseIntent {
   /**
    * Predicates to identify the records to update.
    */
-  predicates: Predicate[];
+  predicates: PredicateGroup;
 
   /**
    * The data payload containing the fields to update.
@@ -930,7 +970,7 @@ export interface ValidateRequestParams extends RequestParams {
   /**
    * The resource to validate against.
    */
-  qualifiedId: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The Intent to validate.
@@ -978,7 +1018,7 @@ export interface ExecuteRequestParams extends PaginatedRequestParams {
   /**
    * The resource to execute against.
    */
-  qualifiedId: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The Intent to execute.
