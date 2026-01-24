@@ -106,14 +106,14 @@
                     "$ref": "#/$defs/IntentClass",
                     "description": "The intent class the Agent plans to use."
                 },
-                "qualifiedId": {
+                "resourcedId": {
                     "description": "The unique identifier of the resource to describe.",
                     "type": "string"
                 }
             },
             "required": [
                 "intentClass",
-                "qualifiedId"
+                "resourcedId"
             ],
             "type": "object"
         },
@@ -133,8 +133,8 @@
                     "description": "An opaque token representing the pagination position after the last returned result.",
                     "type": "string"
                 },
-                "qualifiedId": {
-                    "description": "The resource's qualified identifier.",
+                "resourceId": {
+                    "description": "The resource's full qualified identifier.",
                     "type": "string"
                 },
                 "usageContract": {
@@ -148,7 +148,7 @@
             },
             "required": [
                 "intentClass",
-                "qualifiedId",
+                "resourceId",
                 "usageContract",
                 "version"
             ],
@@ -313,14 +313,14 @@
                     "$ref": "#/$defs/Intent",
                     "description": "The Intent to execute."
                 },
-                "qualifiedId": {
+                "resourceId": {
                     "description": "The resource to execute against.",
                     "type": "string"
                 }
             },
             "required": [
                 "intent",
-                "qualifiedId"
+                "resourceId"
             ],
             "type": "object"
         },
@@ -382,7 +382,7 @@
                     "description": "Human-readable description of the field.",
                     "type": "string"
                 },
-                "id": {
+                "fieldId": {
                     "description": "The field identifier.",
                     "type": "string"
                 },
@@ -397,9 +397,7 @@
                 },
                 "samples": {
                     "description": "Sample values for this field.",
-                    "items": {
-                        "type": "string"
-                    },
+                    "items": {},
                     "type": "array"
                 },
                 "type": {
@@ -408,7 +406,7 @@
                 }
             },
             "required": [
-                "id",
+                "fieldId",
                 "type"
             ],
             "type": "object"
@@ -436,6 +434,34 @@
                     "type": "boolean"
                 }
             },
+            "type": "object"
+        },
+        "IdentityPredicate": {
+            "description": "An identity predicate used for unique key lookups.\nOnly allows the EQ operator to ensure exact matching.",
+            "properties": {
+                "fieldId": {
+                    "description": "The field identifier to filter on.",
+                    "type": "string"
+                },
+                "op": {
+                    "const": "EQ",
+                    "description": "The comparison operator. Must be EQ for identity lookups.",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "The value to compare against. Should be a single value (not an array).",
+                    "type": [
+                        "string",
+                        "integer",
+                        "boolean"
+                    ]
+                }
+            },
+            "required": [
+                "fieldId",
+                "op",
+                "value"
+            ],
             "type": "object"
         },
         "Implementation": {
@@ -592,15 +618,6 @@
             ],
             "description": "The Intent structure used in VALIDATE and EXECUTE operations."
         },
-        "IntentCategory": {
-            "description": "The category of data operations supported by ADP.",
-            "enum": [
-                "COGNITIVE",
-                "READ",
-                "WRITE"
-            ],
-            "type": "string"
-        },
         "IntentClass": {
             "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
             "enum": [
@@ -736,6 +753,15 @@
             ],
             "type": "object"
         },
+        "LogicOperator": {
+            "description": "Logic operators supported for predicate expressions.",
+            "enum": [
+                "AND",
+                "NOT",
+                "OR"
+            ],
+            "type": "string"
+        },
         "LookupIntent": {
             "description": "Intent for retrieving a single entity by its unique identifier.",
             "properties": {
@@ -743,12 +769,12 @@
                     "const": "LOOKUP",
                     "type": "string"
                 },
-                "resourceId": {
-                    "description": "The unique resource ID to lookup.\nIf not provided, it may be inferred from context or `QualifiedId` in the request.",
-                    "type": "string"
+                "key": {
+                    "$ref": "#/$defs/IdentityPredicate",
+                    "description": "The identity predicate specifying the unique key to lookup.\nThis should uniquely identify a single entity (e.g., primary key lookup).\nOnly the EQ operator is allowed for identity lookups."
                 },
-                "selection": {
-                    "description": "Fields to select.",
+                "projections": {
+                    "description": "Fields to project.",
                     "items": {
                         "type": "string"
                     },
@@ -756,7 +782,8 @@
                 }
             },
             "required": [
-                "intentClass"
+                "intentClass",
+                "key"
             ],
             "type": "object"
         },
@@ -845,8 +872,8 @@
         "Predicate": {
             "description": "A single predicate in an Intent IR.",
             "properties": {
-                "field": {
-                    "description": "The field to filter on.",
+                "fieldId": {
+                    "description": "The field identifier to filter on.",
                     "type": "string"
                 },
                 "op": {
@@ -877,7 +904,7 @@
                 }
             },
             "required": [
-                "field",
+                "fieldId",
                 "op",
                 "value"
             ],
@@ -906,6 +933,34 @@
                 "fieldId",
                 "operators",
                 "usage"
+            ],
+            "type": "object"
+        },
+        "PredicateGroup": {
+            "description": "A group of predicates with a logic operator.",
+            "properties": {
+                "op": {
+                    "$ref": "#/$defs/LogicOperator",
+                    "description": "The logic operator to use."
+                },
+                "predicates": {
+                    "description": "The predicates to use. For \"NOT\" operator, the predicates should be a single predicate or predicate group.",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/Predicate"
+                            },
+                            {
+                                "$ref": "#/$defs/PredicateGroup"
+                            }
+                        ]
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "op",
+                "predicates"
             ],
             "type": "object"
         },
@@ -959,33 +1014,27 @@
         "QueryIntent": {
             "description": "Intent for retrieving a set of entities based on criteria.",
             "properties": {
-                "groupBy": {
-                    "description": "Fields to group results by.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                },
                 "intentClass": {
                     "const": "QUERY",
                     "type": "string"
                 },
+                "limit": {
+                    "description": "The maximum number of results to return.",
+                    "type": "integer"
+                },
                 "orderBy": {
-                    "description": "Fields to order results by.\nFormat: \"fieldName\" (asc) or \"-fieldName\" (desc).",
+                    "description": "Fields to order results by.",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/$defs/SortOrder"
                     },
                     "type": "array"
                 },
                 "predicates": {
-                    "description": "Predicates for filtering data.",
-                    "items": {
-                        "$ref": "#/$defs/Predicate"
-                    },
-                    "type": "array"
+                    "$ref": "#/$defs/PredicateGroup",
+                    "description": "Predicates for filtering data."
                 },
-                "selection": {
-                    "description": "Fields to select.",
+                "projections": {
+                    "description": "Fields to project.",
                     "items": {
                         "type": "string"
                     },
@@ -1051,7 +1100,7 @@
                     "$ref": "#/$defs/IntentClass",
                     "description": "The primary intent class this resource supports."
                 },
-                "qualifiedId": {
+                "resourcedId": {
                     "description": "The unique domain-qualified identifier for this resource.",
                     "type": "string"
                 },
@@ -1077,7 +1126,7 @@
             },
             "required": [
                 "intentClass",
-                "qualifiedId",
+                "resourcedId",
                 "summary",
                 "version"
             ],
@@ -1111,11 +1160,8 @@
                     "description": "The data payload containing the fields to update."
                 },
                 "predicates": {
-                    "description": "Predicates to identify the records to update.",
-                    "items": {
-                        "$ref": "#/$defs/Predicate"
-                    },
-                    "type": "array"
+                    "$ref": "#/$defs/PredicateGroup",
+                    "description": "Predicates to identify the records to update."
                 }
             },
             "required": [
@@ -1145,6 +1191,28 @@
                     "type": "array"
                 }
             },
+            "type": "object"
+        },
+        "SortOrder": {
+            "description": "Sort order for a field.",
+            "properties": {
+                "direction": {
+                    "description": "The direction of the sort order.",
+                    "enum": [
+                        "ASC",
+                        "DESC"
+                    ],
+                    "type": "string"
+                },
+                "fieldId": {
+                    "description": "The field to sort by.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "direction",
+                "fieldId"
+            ],
             "type": "object"
         },
         "SynthesizeIntent": {
@@ -1240,14 +1308,14 @@
                     "$ref": "#/$defs/Intent",
                     "description": "The Intent to validate."
                 },
-                "qualifiedId": {
+                "resourceId": {
                     "description": "The resource to validate against.",
                     "type": "string"
                 }
             },
             "required": [
                 "intent",
-                "qualifiedId"
+                "resourceId"
             ],
             "type": "object"
         },

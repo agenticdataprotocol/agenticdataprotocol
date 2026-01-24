@@ -179,13 +179,6 @@ export type ResourceId = string;
 export type TraceId = string;
 
 /**
- * The category of data operations supported by ADP.
- *
- * @category Common Types
- */
-export type IntentCategory = "READ" | "WRITE" | "COGNITIVE";
-
-/**
  * READ operations:
  * - `LOOKUP` - Retrieve a single entity by unique key
  * - `QUERY` - Retrieve a set of entities using boolean predicates
@@ -273,6 +266,28 @@ export interface Predicate {
   value: string | number | boolean | (string | number | boolean)[];
 }
 
+/**
+ * An identity predicate used for unique key lookups.
+ * Only allows the EQ operator to ensure exact matching.
+ *
+ * @category Common Types
+ */
+export interface IdentityPredicate {
+  /**
+   * The field identifier to filter on.
+   */
+  fieldId: string;
+
+  /**
+   * The comparison operator. Must be EQ for identity lookups.
+   */
+  op: "EQ";
+
+  /**
+   * The value to compare against. Should be a single value (not an array).
+   */
+  value: string | number | boolean;
+}
 
 /**
  * A group of predicates with a logic operator.
@@ -620,7 +635,7 @@ export interface Field {
   /**
    * The field identifier.
    */
-  id: string;
+  fieldId: string;
 
   /**
    * The data type of this field.
@@ -636,7 +651,7 @@ export interface Field {
   /**
    * Sample values for this field.
    */
-  samples?: string[];
+  samples?: unknown[];
 
   /**
    * If true, this field is masked/redacted by policy.
@@ -814,15 +829,36 @@ export interface LookupIntent {
   intentClass: "LOOKUP";
 
   /**
-   * The unique resource ID to lookup.
-   * If not provided, it may be inferred from context or `ResourceId` in the request.
+   * The identity predicate specifying the unique key to lookup.
+   * This should uniquely identify a single entity (e.g., primary key lookup).
+   * Only the EQ operator is allowed for identity lookups.
+   *
+   * @example { "fieldId": "bank_id", "op": "EQ", "value": "FDIC-10538" }
+   * @example { "fieldId": "id", "op": "EQ", "value": 12345 }
    */
-  resourceId?: ResourceId;
+  key: IdentityPredicate;
 
   /**
-   * Fields to select.
+   * Fields to project.
    */
-  selection?: string[];
+  projections?: string[];
+}
+
+/**
+ * Sort order for a field.
+ *
+ * @category Common Types
+ */
+export interface SortOrder {
+  /**
+   * The direction of the sort order.
+   */
+  direction: "ASC" | "DESC";
+
+  /**
+   * The field to sort by.
+   */
+  fieldId: string;
 }
 
 /**
@@ -839,15 +875,20 @@ export interface QueryIntent {
   predicates: PredicateGroup;
 
   /**
-   * Fields to select.
+   * Fields to project.
    */
-  selection?: string[];
+  projections?: string[];
 
   /**
    * Fields to order results by.
-   * Format: "fieldName" (asc) or "-fieldName" (desc).
+   * @example [{ "fieldId": "name", "direction": "ASC" }, { "fieldId": "created_at", "direction": "DESC" }]
    */
-  orderBy?: string[];
+  orderBy?: SortOrder[];
+
+  /**
+   * The maximum number of results to return.
+   */
+  limit?: number;
 }
 
 /**
