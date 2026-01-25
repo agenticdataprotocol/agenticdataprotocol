@@ -1,4 +1,3 @@
-
 Version 2026.01.20
 
 This ADP protocol ensures that the Agent and Hypervisor are always in "Contract Alignment." By treating every interaction as a negotiation of constraints, we eliminate the guesswork that leads to broken queries and security rejections.
@@ -12,56 +11,35 @@ This ADP protocol ensures that the Agent and Hypervisor are always in "Contract 
 #### 1. DISCOVER (The Catalog)
 
 - **Interaction:** The Agent requests a list of visible resources.
-    
 - **Hypervisor Action:** Filters the Manifest based on the Agent's identity and returns only `PUBLISHED` entities.
-    
 - **Output:** A list of `[Domain-Qualified Entity ID, Intent Class, Semantic Description]`.
-    
-    - _Example:_ `com.acme.finance:bank_failures` | `IntentClass: Query` | `Description: Historical records of US bank insolvency.`
-        
+  - _Example:_ `com.acme.finance:bank_failures` | `IntentClass: Query` | `Description: Historical records of US bank insolvency.`
 - **Why Domain Tags?** Prefixes (like `com.acme.finance`) act as a namespace, preventing collisions and allowing the Agent to group related entities logically.
-    
 
 #### 2. DESCRIBE (The Usage Contract)
 
 - **Interaction:** Agent asks "How do I specifically use `com.acme.finance:bank_failures`?"
-    
 - **Hypervisor Action:** Merges the **Manifest Schema** with **Access & Technical Policies**.
-    
 - **Output:** A **Usage Contract** containing:
-    
-    - **Projections:** Permitted fields (with masked fields flagged).
-        
-    - **Mandatory Predicates:** Policy-enforced filters (e.g., `date > '2020-01-01'`) that the Agent _must_ include or expect.
-        
-    - **Whitelists/Clues:** Allowed enums for specific fields (e.g., `State` must be from a specific list).
-        
-    - **Anchors:** Performance requirements (e.g., "Must filter by `Bank_Name`").
-        
+  - **Projections:** Permitted fields (with masked fields flagged).
+  - **Mandatory Predicates:** Policy-enforced filters (e.g., `date > '2020-01-01'`) that the Agent _must_ include or expect.
+  - **Whitelists/Clues:** Allowed enums for specific fields (e.g., `State` must be from a specific list).
+  - **Anchors:** Performance requirements (e.g., "Must filter by `Bank_Name`").
 - **Policy Feedback:** The contract explicitly labels constraints as `SYSTEM_ENFORCED` so the Agent knows which parts of the query it cannot override.
-    
 
 #### 3. VALIDATE (The Dry-Run) — _Optional_
 
 - **Interaction:** Agent submits a draft `Intent IR` for a "sanity check."
-    
 - **Hypervisor Action:** Performs full syntax validation, policy compliance check, and semantic mapping without touching the database.
-    
 - **Output:** A **Validation Result** and a **Logical Query Plan**.
-    
-    - The Logical Plan shows ~~the Agent exactly how the Hypervisor intends to translate the IR into SQL (including injected policy filters). This allows the Agent to self-correct if the plan doesn't match its intent.~~
-        
+  - The Logical Plan shows ~~the Agent exactly how the Hypervisor intends to translate the IR into SQL (including injected policy filters). This allows the Agent to self-correct if the plan doesn't match its intent.~~
 
 #### 4. EXECUTE (The Commitment)
 
 - **Interaction:** Agent issues the finalized `Intent IR`.
-    
 - **Hypervisor Action:** Atomic validation and execution. It compiles the IR into a physical query, executes it against the backend (RDBMS/NoSQL/Vector/GraphDB/etc.), and captures logs.
-    
 - **Output:** A structured result set wrapped with a **Trace ID**.
-    
 - **Statefulness & Feedback:** If the execution fails at this late stage, the Hypervisor returns a "Correction Hint." Instead of a generic `SQL Error`, it returns: _"Rejection: Filter value 'CA' for 'State' is invalid. Did you mean 'California'?"_
-    
 
 ---
 
@@ -78,13 +56,13 @@ sequenceDiagram
     autonumber
     participant A as Agent (LLM)
     participant H as Data Hypervisor
-    participant B as Data Backend 
+    participant B as Data Backend
 
     Note over A, H: Phase 1: Semantic Discovery
     A->>+H: DISCOVER()
     Note right of H: Filter Published & Permitted
     H-->>-A: List: [Domain:EntityID, IntentClass, Description]
-    
+
     Note over A, H: Phase 2: Contract Negotiation
     A->>+H: DESCRIBE(com.acme.finance:bank_failures)
     Note right of H: Merge Manifest + Access Policy + Tech Policy
@@ -97,7 +75,7 @@ sequenceDiagram
 
     Note over A, H: Phase 4: Execution
     A->>+H: EXECUTE(Intent IR)
-    
+
     alt is Valid and Policy Compliant
         H->>+B: Compiled backend language (with injected predicates)
         B-->>-H: Raw Result Set
@@ -108,6 +86,7 @@ sequenceDiagram
         Note over A: Agent self-corrects based on hint
     end
 ```
+
 ## B. ADP Resources and Intents
 
 ### B1. Resource Identification: `qualified_id`
@@ -115,13 +94,9 @@ sequenceDiagram
 All resources within the ADP ecosystem are addressed using a unique, structured identifier.
 
 - **Convention**: `xxx.yyy.zzz:abc`
-    
 - **Structure**: `[Reverse-DNS-Domain]:[Entity-Alias]`
-    
-    - **Domain (`xxx.yyy.zzz`)**: Hierarchical namespace representing the data owner (e.g., `com.acme.finance`).
-        
-    - **Alias (`abc`)**: Unique identifier for the dataset within that domain (e.g., `bank_failures`).
-    
+  - **Domain (`xxx.yyy.zzz`)**: Hierarchical namespace representing the data owner (e.g., `com.acme.finance`).
+  - **Alias (`abc`)**: Unique identifier for the dataset within that domain (e.g., `bank_failures`).
 
 ### B2. Unified ADP Intent Class Description Table
 
@@ -129,7 +104,7 @@ This table serves as the normative definition for all Agent interactions.
 
 | **Category**  | **Intent Class** | **Purpose**                                        | **Logic Mechanism**           | **Expected Output**  |
 | ------------- | ---------------- | -------------------------------------------------- | ----------------------------- | -------------------- |
-| **READ**      | **IDENTIFY**     | Retrieve 1 entity by unique key.                   | Identity Predicate            | Single Object        |
+| **READ**      | **LOOKUP**       | Retrieve 1 entity by unique key.                   | Identity Predicate            | Single Object        |
 | **READ**      | **QUERY**        | Retrieve a set of entities.                        | Boolean Predicates            | List of Objects      |
 | **READ**      | **PATH**         | Traverse **variable-depth** network linkages.      | Connectivity/Depth Predicates | Graph/Path/Tree      |
 | **READ**      | **CORRELATE**    | Merge distinct entity types via **shared keys**.   | Relationship/Join Predicates  | Merged/Flattened Set |
@@ -140,21 +115,19 @@ This table serves as the normative definition for all Agent interactions.
 | **WRITE**     | **MERGE**        | Idempotent Upsert (Update if exists, else Create). | dentity + Value Payload       | Success/ID           |
 | **COGNITIVE** | **SYNTHESIZE**   | Transform/Extract structure from blobs.            | Processing Logic              | Structured JSON      |
 
-
 ### B2. Major Backend Mapping to ADP Intent Classes
 
 This map shows how the Hypervisor translates the abstract **Intent Class** and **Predicates** into physical backend operations.
 
-| **Backend Type**   | **IDENTIFY (Point)** | **QUERY (Set)**        | **PATH **            | CORRLATE (Relationship)            | **REVISE (Update)**     | MERGE (Upsert)          |
-| ------------------ | -------------------- | ---------------------- | -------------------- | ---------------------------------- | ----------------------- | ----------------------- |
-| **RDBMS** (SQL)    | `PK` Lookup          | `SELECT ... WHERE`     | Recursive CTEs       | `INNER/LEFT/CROSS JOIN`            | `UPDATE ... WHERE`      | MERGE INTO              |
-| **BigQuery**       | N/A (Scan)           | Partitioned Scan       | N/A                  | Dataset/Table Joins                | DML Update              | N/A                     |
-| **Vector DB**      | `fetch(id)`          | Metadata Filter + NN   | N/A                  | Metadata-based lookup              | `upsert(id, vector)`    | upsert(id, vector)      |
-| **Graph DB**       | `MATCH (n) ID(n)`    | Property Filters       | `MATCH (p)-[r]->(q)` | `MATCH (a), (b) WHERE a.id = b.id` | `SET n.prop = x`        | MERGE (n:Label {id:x})  |
-| **NoSQL** (KV/Doc) | `GetItem`            | `Query` (GSI) / `Scan` | N/A                  | N/A                                | `UpdateItem`            | `PutItem` (Overwrites)  |
-| **Object Store**   | `GetObject`          | `ListObjects` + Prefix | N/A                  | Metadata-key cross-reference       | `PutObject` (Overwrite) | `PutObject` (Overwrite) |
-| **GraphQL**        | Query by ID          | Query w/ Args          | Nested Selection     | Argument-based Linkage             | Mutation                |                         |
-
+| **Backend Type**   | **LOOKUP (Point)** | **QUERY (Set)**        | **PATH **            | CORRLATE (Relationship)            | **REVISE (Update)**     | MERGE (Upsert)          |
+| ------------------ | ------------------ | ---------------------- | -------------------- | ---------------------------------- | ----------------------- | ----------------------- |
+| **RDBMS** (SQL)    | `PK` Lookup        | `SELECT ... WHERE`     | Recursive CTEs       | `INNER/LEFT/CROSS JOIN`            | `UPDATE ... WHERE`      | MERGE INTO              |
+| **BigQuery**       | N/A (Scan)         | Partitioned Scan       | N/A                  | Dataset/Table Joins                | DML Update              | N/A                     |
+| **Vector DB**      | `fetch(id)`        | Metadata Filter + NN   | N/A                  | Metadata-based lookup              | `upsert(id, vector)`    | upsert(id, vector)      |
+| **Graph DB**       | `MATCH (n) ID(n)`  | Property Filters       | `MATCH (p)-[r]->(q)` | `MATCH (a), (b) WHERE a.id = b.id` | `SET n.prop = x`        | MERGE (n:Label {id:x})  |
+| **NoSQL** (KV/Doc) | `GetItem`          | `Query` (GSI) / `Scan` | N/A                  | N/A                                | `UpdateItem`            | `PutItem` (Overwrites)  |
+| **Object Store**   | `GetObject`        | `ListObjects` + Prefix | N/A                  | Metadata-key cross-reference       | `PutObject` (Overwrite) | `PutObject` (Overwrite) |
+| **GraphQL**        | Query by ID        | Query w/ Args          | Nested Selection     | Argument-based Linkage             | Mutation                |                         |
 
 ## C. The "Required Predicate" Mechanism
 
@@ -163,30 +136,21 @@ we put the enforcement logic into the **Usage Contract**.
 #### **Behavioral Logic for the Agent:**
 
 1. **Contract Inspection**: Agent calls `DESCRIBE(qualified_id)`.
-    
 2. **Logic Mapping**: Hypervisor returns a list of fields and their requirements (e.g., `State: {usage: "REQUIRED"}`).
-    
 3. **Constraint Injection**: The Agent **must** include a `Predicate` for `State` in its `EXECUTE` call.
-    
 4. **Enforcement**: If the `Predicate` is missing, the Hypervisor returns a **400 Bad Request** with a "Correction Hint" identifying the missing required predicate
-
-
 
 ## D. ADP.Discover Interface Specification
 
 #### D1. **Normative Description**
 
 - **Purpose**: Identity-aware metadata browsing with windowed results.
-    
 - **Pagination Logic**: The Agent provides a `limit` and an optional `offset` (or `page`). The Hypervisor returns a `pagination` object containing metadata for the next logical request.
-    
 - **Filtering**: Filters (Domain, Intent, Keyword) are applied **before** pagination is calculated.
-    
-    
+
 ### D2. ADP.Discover IR Specification
 
 #### **Input: DiscoverRequest**
-
 
 ```JSON
 {
@@ -201,6 +165,7 @@ we put the enforcement logic into the **Usage Contract**.
 ```
 
 Output: DiscoverResponse
+
 ```JSON
 {
   "resources": [
@@ -223,7 +188,7 @@ Output: DiscoverResponse
 }
 ```
 
-### D3. Verbiage for Human & LLM 
+### D3. Verbiage for Human & LLM
 
 **To the Human:** The `pagination` block allows the Hypervisor to remain performant regardless of the size of the underlying manifest. By returning `has_more` and `next_offset`, we provide a clear "state" for the Agent to follow if it needs to continue searching.
 
@@ -232,21 +197,15 @@ Output: DiscoverResponse
 > "When calling `Discover()`, always check the `pagination.has_more` field. If `true` and you haven't found a suitable entity, call `Discover()` again with the `offset` set to `next_offset`. Do not attempt to process more than 20 entities at once to maintain reasoning accuracy."
 
 - **Version Tracking**: If an Agent receives a `version` mismatch, it knows it must invalidate its local "Describe" cache for that entity.
-    
 - **Summarization**: By splitting `summary` and `semantic_description`, we allow the LLM to perform a two-stage filter: "Scan titles/summaries first, then read deep descriptions only for top candidates."
-
-
 
 ## E. ADP.Describe Interface Specification
 
 ### E1. **Normative Description**
 
 - **Purpose**: To provide a machine-readable execution contract for a specific resource.
-    
 - **Logic**: It merges physical schema (data types), logical constraints (predicates), and semantic clues (cardinality/formats).
-    
 - **Enforcement**: Any predicate labeled `REQUIRED` must be present in the subsequent `Execute()` call, or the Hypervisor will reject the request.
-    
 
 ---
 
@@ -273,7 +232,7 @@ Output: DiscoverResponse
       "intent_class": {
         "type": "string",
         "enum": [
-          "IDENTIFY", "QUERY", "PATH", "CORRELATE", "SUMMARIZE",
+          "LOOKUP", "QUERY", "PATH", "CORRELATE", "SUMMARIZE",
           "INGEST", "REVISE", "MERGE", "PRUNE"
         ]
       },
@@ -292,8 +251,8 @@ Output: DiscoverResponse
 }
 ```
 
-
 #### **Output JSON schema**
+
 ```JSON
 {
   "$schema": "https://adp.spec/v1/describe-response.schema.json",
@@ -320,9 +279,9 @@ Output: DiscoverResponse
             "description": "The canonical catalog of available fields.",
             "items": {
               "type": "object",
-              "required": ["id", "type"],
+              "required": ["fieldId", "type"],
               "properties": {
-                "id": { "type": "string", "description": "The unique field_id." },
+                "fieldId": { "type": "string", "description": "The unique field identifier." },
                 "type": { "type": "string" },
                 "description": { "type": "string" },
                 "samples": { "type": "array", "items": { "type": "string" } },
@@ -346,9 +305,9 @@ Output: DiscoverResponse
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["field_id", "usage", "operators"],
+                  "required": ["fieldId", "usage", "operators"],
                   "properties": {
-                    "field_id": { "type": "string" },
+                    "fieldId": { "type": "string" },
                     "usage": { "enum": ["REQUIRED", "OPTIONAL"] },
                     "operators": { "type": "array", "items": { "type": "string" } },
                     "params": {
@@ -368,7 +327,7 @@ Output: DiscoverResponse
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "properties": { "field_id": { "type": "string" } }
+                  "properties": { "fieldId": { "type": "string" } }
                 }
               },
               "mutables": {
@@ -377,7 +336,7 @@ Output: DiscoverResponse
                 "items": {
                   "type": "object",
                   "properties": {
-                    "field_id": { "type": "string" },
+                    "fieldId": { "type": "string" },
                     "constraints": { "type": "object" }
                   }
                 }
@@ -429,34 +388,34 @@ In this example, the Agent is asking for a `QUERY` contract for a Bank Failure t
     "usage_contract": {
       "fields": [
         {
-          "field_id": "state_code",
+          "fieldId": "state_code",
           "type": "STRING",
           "description": "US State Abbreviation",
           "samples": ["NY", "FL"],
           "metadata": { "cardinality": 50, "format": "AA", "whitelist_only": true }
         },
         {
-          "field_id": "routing_number",
+          "fieldId": "routing_number",
           "type": "STRING",
           "description": "ABA Number",
           "is_masked": true
         },
-        { 
-	      "field_id": "failure_summary", 
-	      "type": "STRING", 
-	      "description": "Long-form text summary of the failure event.",
-	      "metadata": { "similarity_searchable": true } 
+        {
+          "fieldId": "failure_summary",
+          "type": "STRING",
+          "description": "Long-form text summary of the failure event.",
+          "metadata": { "similarity_searchable": true }
         }
       ],
       "capabilities": {
         "predicates": [
-          { "field_id": "state_code", "usage": "REQUIRED", "operators": ["EQ", "IN"] }
-          { "field_id": "failure_summary", "usage": "OPTIONAL", "operators": ["SIMILAR"], "params": { "accepted_media_types": ["text/plain"], "distance_functions": ["COSINE"], "top_max": 20 } }
+          { "fieldId": "state_code", "usage": "REQUIRED", "operators": ["EQ", "IN"] },
+          { "fieldId": "failure_summary", "usage": "OPTIONAL", "operators": ["SIMILAR"], "params": { "accepted_media_types": ["text/plain"], "distance_functions": ["COSINE"], "top_max": 20 } }
         ],
         "projections": [
-          { "field_id": "state_code" },
-          { "field_id": "failure_summary" },
-          { "field_id": "routing_number" }
+          { "fieldId": "state_code" },
+          { "fieldId": "failure_summary" },
+          { "fieldId": "routing_number" }
         ],
         "mutables": []
       }
@@ -474,27 +433,27 @@ In this example, the Agent is asking for a `QUERY` contract for a Bank Failure t
     "usage_contract": {
       "fields": [
         {
-          "id": "st_abbr",
+          "fieldId": "st_abbr",
           "type": "STRING",
           "description": "State Abbreviation for Join",
           "metadata": { "hint": "Correlate this with bank_failures.state_code" }
         },
         {
-          "id": "pop_count",
+          "fieldId": "pop_count",
           "type": "INTEGER",
           "description": "Population"
         }
       ],
       "capabilities": {
         "predicates": [
-          { "field_id": "st_abbr", "usage": "REQUIRED", "operators": ["EQ"] }
+          { "fieldId": "st_abbr", "usage": "REQUIRED", "operators": ["EQ"] }
         ],
         "projections": [
-          { "field_id": "st_abbr" },
-          { "field_id": "pop_count" }
+          { "fieldId": "st_abbr" },
+          { "fieldId": "pop_count" }
         ],
         "mutables": [
-          { "field_id": "pop_count", "constraints": { "min": 0 } }
+          { "fieldId": "pop_count", "constraints": { "min": 0 } }
         ]
       }
     },
@@ -503,13 +462,14 @@ In this example, the Agent is asking for a `QUERY` contract for a Bank Failure t
   }
 ]
 ```
+
 ### E3. Normative Definitions for AI Code Generation
 
 - **Field Definition**: The AI looks at `fields` to understand the "What."
 - **Constraint Application**: The AI looks at `metadata` to understand the "How" (formatting).
 - **Role Assignment**: The AI looks at `capabilities` to understand the "Can."
-    - If `intent_class` is `QUERY`, it ignores `mutables`.    
-    - If `is_masked` is `true`, it informs the user that sensitive data will be redacted
+  - If `intent_class` is `QUERY`, it ignores `mutables`.
+  - If `is_masked` is `true`, it informs the user that sensitive data will be redacted
 
 To ensure an AI can generate valid code from this spec, we define the following "Logic Hints":
 
@@ -530,9 +490,6 @@ To ensure an AI can generate valid code from this spec, we define the following 
 
 > "Read the `usage_contract` carefully. Identify all `REQUIRED` predicates. For each predicate, verify your input matches the `format` (e.g., `YYYY-MM-DD`). If `whitelist_only` is true, your `value` must be an exact match from the provided examples. Construct your `Execute` IR using only `allowed_fields`."
 
-
-
-
 In the **Execute()** phase, the Agent transitions from "learning" to "doing." It treats the **Usage Contract** from the `Describe()` call as its governing logic.
 
 The Agent follows a strict **Logic-Bind-Serialize** cycle: it **Logically** selects predicates, **Binds** them to validated user inputs according to format rules, and **Serializes** the final Intent IR.
@@ -543,7 +500,7 @@ This specification is designed for **deterministic code generation**. By providi
 
 ### **F1. ADP.Execute IR Specification**
 
-#### **Input: ExecuteRequest JSON schema** 
+#### **Input: ExecuteRequest JSON schema**
 
 ```JSON
 {
@@ -560,30 +517,52 @@ This specification is designed for **deterministic code generation**. By providi
     },
     "intent_class": {
       "type": "string",
-      "enum": ["IDENTIFY", "QUERY", "PATH", "CORRELATE", "SUMMARIZE", "INGEST", "REVISE", "MERGE", "PRUNE"]
+      "enum": ["LOOKUP", "QUERY", "PATH", "CORRELATE", "SUMMARIZE", "INGEST", "REVISE", "MERGE", "PRUNE"]
     },
     "predicates": {
-      "type": "array",
-      "description": "Filtering or target criteria.",
-      "items": {
-        "type": "object",
-        "required": ["field_id", "op", "value"],
-        "properties": {
-          "field_id": { "type": "string" },
-          "op": { "type": "string", "example": "SIMILAR, EQ, GT, IN" },
-          "value": {
+      "type": "object",
+      "description": "Filtering or target criteria as a predicate group with logic operators.",
+      "required": ["op", "predicates"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["AND", "OR", "NOT"],
+          "description": "Logic operator to combine predicates."
+        },
+        "predicates": {
+          "type": "array",
+          "description": "Array of predicates or nested predicate groups.",
+          "items": {
             "oneOf": [
-              { "type": ["string", "number", "boolean", "array"] },
               {
                 "type": "object",
-                "description": "Structured value for SIMILAR operator.",
+                "description": "A single predicate.",
+                "required": ["fieldId", "op", "value"],
                 "properties": {
-                  "text": { "type": "string" },
-                  "blob": { "type": "string", "description": "Base64 or URI reference." },
-                  "top": { "type": "integer" },
-                  "threshold": { "type": "number" },
-                  "distance_function": { "type": "string" }
+                  "fieldId": { "type": "string" },
+                  "op": { "type": "string", "example": "EQ, GT, IN, SIMILAR" },
+                  "value": {
+                    "oneOf": [
+                      { "type": ["string", "number", "boolean", "array"] },
+                      {
+                        "type": "object",
+                        "description": "Structured value for SIMILAR operator.",
+                        "properties": {
+                          "text": { "type": "string" },
+                          "blob": { "type": "string", "description": "Base64 or URI reference." },
+                          "top": { "type": "integer" },
+                          "threshold": { "type": "number" },
+                          "distance_function": { "type": "string" }
+                        }
+                      }
+                    ]
+                  }
                 }
+              },
+              {
+                "type": "object",
+                "description": "A nested predicate group.",
+                "$ref": "#/properties/predicates"
               }
             ]
           }
@@ -592,7 +571,7 @@ This specification is designed for **deterministic code generation**. By providi
     },
     "projections": {
       "type": "array",
-      "description": "List of field_ids to be returned in the result set.",
+      "description": "List of field identifiers to be returned in the result set.",
       "items": { "type": "string" }
     },
     "value_payload": {
@@ -605,15 +584,54 @@ This specification is designed for **deterministic code generation**. By providi
 }
 ```
 
+#### PredicateGroup Structure
+
+The `predicates` field uses a **PredicateGroup** structure that allows complex logical combinations of predicates using AND, OR, and NOT operators. This enables nested predicate groups for sophisticated query construction.
+
+**Structure:**
+
+- `op`: Logic operator (`AND`, `OR`, or `NOT`)
+- `predicates`: Array of predicates or nested predicate groups
+
+**Example: Complex Nested Predicates**
+
+```JSON
+{
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      { "fieldId": "state_code", "op": "EQ", "value": "CA" },
+      {
+        "op": "OR",
+        "predicates": [
+          { "fieldId": "asset_size", "op": "GT", "value": 1000000000 },
+          { "fieldId": "asset_size", "op": "LT", "value": 5000000000 }
+        ]
+      },
+      {
+        "op": "NOT",
+        "predicates": [
+          { "fieldId": "status", "op": "EQ", "value": "ARCHIVED" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This translates to: `state_code = 'CA' AND (asset_size > 1B OR asset_size < 5B) AND NOT status = 'ARCHIVED'`
+
+**Note:** For the `NOT` operator, convention suggests providing exactly one predicate or predicate group, though the schema allows multiple.
+
 2. How the Agent Builds the Payload (Step-by-Step)
 
-|**Step**|**Action**|**Logic Source**|
-|---|---|---|
-|**1. Identify Mandatory**|Find all predicates with `usage: REQUIRED`.|`Describe().usage_contract`|
-|**2. Map User Data**|Bind user input to the specific `field` names.|User Prompt + `Describe().schema`|
-|**3. Lexical Formatting**|Format values (e.g., cast date to `YYYY-MM-DD`).|`Describe().constraints.format`|
-|**4. Whitelist Check**|Verify values against examples if `whitelist_only: true`.|`Describe().constraints.examples`|
-|**5. Projection Selection**|Filter out `masked_fields` from the selection list.|`Describe().projections`|
+| **Step**                    | **Action**                                                | **Logic Source**                  |
+| --------------------------- | --------------------------------------------------------- | --------------------------------- |
+| **1. Identify Mandatory**   | Find all predicates with `usage: REQUIRED`.               | `Describe().usage_contract`       |
+| **2. Map User Data**        | Bind user input to the specific `field` names.            | User Prompt + `Describe().schema` |
+| **3. Lexical Formatting**   | Format values (e.g., cast date to `YYYY-MM-DD`).          | `Describe().constraints.format`   |
+| **4. Whitelist Check**      | Verify values against examples if `whitelist_only: true`. | `Describe().constraints.examples` |
+| **5. Projection Selection** | Filter out `masked_fields` from the selection list.       | `Describe().projections`          |
 
 #### **Output: ExecuteResponse JSON schema**
 
@@ -660,19 +678,15 @@ This specification is designed for **deterministic code generation**. By providi
 By nesting the data under a `results` key rather than returning a top-level array, we solve three major AI-Agent problems:
 
 1. **Ambiguity**: If we returned a top-level array, the Agent might get confused if the first record happens to have a field named "limit" or "offset."
-    
 2. **Context Injection**: The `execution_metadata` allows the Hypervisor to pass back "hints" (e.g., "This data is eventually consistent") that the Agent can use to manage user expectations.
-    
 3. **Unified Error Path**: It allows the Hypervisor to return a consistent object structure whether it’s a partial success, a paginated set, or a full failure.
 
 ### F2. Example: Bank Failure Search
 
 **Agent's Input Context:**
 
-- **User Goal**: "Show me  5 banks that failed in California since 2023 because of liquidity issues"
-    
+- **User Goal**: "Show me 5 banks that failed in California since 2023 because of liquidity issues"
 - **Contract**: `state_code` is **REQUIRED**. `closing_date` is **OPTIONAL**. `routing_number` is **MASKED**, failure_summary allows SIMILARITY search.
-    
 
 #### **The Resulting Agent-Generated Payload:**
 
@@ -680,19 +694,30 @@ By nesting the data under a `results` key rather than returning a top-level arra
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "QUERY",
-  "predicates": [
-    {
-      "field_id": "state_code", 
-      "op": "EQ", 
-      "value": "CA" 
-    },
-    {
-      "field_id": "closing_date", 
-      "op": "GT", 
-      "value": "2023-01-01" 
-    },
-    { "field_id": "failure_summary", "op": "SIMILAR", "value": { "text": "liquidity risk", "top": 5, "distance_function": "COSINE" } }
-  ],
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "state_code",
+        "op": "EQ",
+        "value": "CA"
+      },
+      {
+        "fieldId": "closing_date",
+        "op": "GT",
+        "value": "2023-01-01"
+      },
+      {
+        "fieldId": "failure_summary",
+        "op": "SIMILAR",
+        "value": {
+          "text": "liquidity risk",
+          "top": 5,
+          "distance_function": "COSINE"
+        }
+      }
+    ]
+  },
   "projection": ["bank_name", "asset_size", "closing_date", "failure_summary"],
   "limit": 5
 }
@@ -700,13 +725,12 @@ By nesting the data under a `results` key rather than returning a top-level arra
 
 #### Output: ExecuteResponse (QUERY)
 
-
 ```JSON
 {
   "results": [
-    { 
-      "bank_name": "Silicon Valley Bank", 
-      "failure_summary": "The institution faced severe liquidity constraints following..." 
+    {
+      "bank_name": "Silicon Valley Bank",
+      "failure_summary": "The institution faced severe liquidity constraints following..."
     }
   ],
   "pagination": {
@@ -719,21 +743,26 @@ By nesting the data under a `results` key rather than returning a top-level arra
 }
 ```
 
-
 ### F3. Example: WRITE Intent (MERGE)
 
 The `MERGE` intent performs an idempotent upsert. If the identity predicate (`bank_id`) matches an existing record, it updates; otherwise, it creates a new record.
 
 #### **Input: ExecuteRequest (MERGE)**
 
-
 ```JSON
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "MERGE",
-  "predicates": [
-    { "field_id": "bank_id", "op": "EQ", "value": "FDIC-10538" }
-  ],
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "bank_id",
+        "op": "EQ",
+        "value": "FDIC-10538"
+      }
+    ]
+  },
   "value_payload": {
     "bank_name": "Silicon Valley Bank",
     "asset_size": 209000000000,
@@ -744,14 +773,13 @@ The `MERGE` intent performs an idempotent upsert. If the identity predicate (`ba
 
 #### **Output: ExecuteResponse (MERGE)**
 
-
 ```JSON
 {
   "results": [
-    { 
-      "bank_id": "FDIC-10538", 
-      "status": "SUCCESS", 
-      "operation": "UPDATE" 
+    {
+      "bank_id": "FDIC-10538",
+      "status": "SUCCESS",
+      "operation": "UPDATE"
     }
   ],
   "pagination": {
@@ -764,16 +792,17 @@ The `MERGE` intent performs an idempotent upsert. If the identity predicate (`ba
 ```
 
 ---
+
 ### F4. Normative Enforcement Table
 
 To guide the AI's code generation, we define these "Success/Failure" conditions for the **Execution IR**:
 
-|**Rule**|**Enforcement**|**Hypervisor Response if Violated**|
-|---|---|---|
-|**Presence**|All `REQUIRED` predicates must exist.|`400 Bad Request: Missing Required Predicate`|
-|**Integrity**|`field` must match `allowed_fields`.|`400 Bad Request: Field Not Found/Permitted`|
-|**Format**|`value` must match the `format` hint.|`422 Unprocessable Entity: Format Mismatch`|
-|**Projection**|`selection` must NOT contain `masked_fields`.|`403 Forbidden: Redacted Field Access`|
+| **Rule**       | **Enforcement**                               | **Hypervisor Response if Violated**           |
+| -------------- | --------------------------------------------- | --------------------------------------------- |
+| **Presence**   | All `REQUIRED` predicates must exist.         | `400 Bad Request: Missing Required Predicate` |
+| **Integrity**  | `field` must match `allowed_fields`.          | `400 Bad Request: Field Not Found/Permitted`  |
+| **Format**     | `value` must match the `format` hint.         | `422 Unprocessable Entity: Format Mismatch`   |
+| **Projection** | `selection` must NOT contain `masked_fields`. | `403 Forbidden: Redacted Field Access`        |
 
 This **Execute()** spec ensures that the Agent acts as a precise "Logic Broker." By following the `Describe` contract, the Agent avoids the trial-and-error of raw SQL or API trial-and-error, resulting in a single, successful execution turn.
 
@@ -782,11 +811,8 @@ This **Execute()** spec ensures that the Agent acts as a precise "Logic Broker."
 ### **G1. Normative Description**
 
 - **Purpose**: Dry-run validation of an `Execute` payload against the Resource Contract and active Security Policies.
-    
 - **Scope**: Checks for mandatory predicates, data type/format alignment, and projection permissions.
-    
 - **Outcome**: Returns a Boolean `valid` status. If `false`, it provides a structured `issues` array that serves as the basis for Agent self-correction.
-    
 
 ---
 
@@ -800,11 +826,17 @@ The input is identical to the `Execute` payload, wrapping it in a validation con
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "QUERY",
-  "predicates": [
-      { "field_id": "closing_date", "op": "GT", "value": "23-01-01" }
-    ],
-    "projection": ["bank_name", "routing_number"]
-  
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "closing_date",
+        "op": "GT",
+        "value": "23-01-01"
+      }
+    ]
+  },
+  "projection": ["bank_name", "routing_number"]
 }
 ```
 
@@ -818,19 +850,19 @@ The response is designed to be programmatically parsed by the Agent to refine it
   "issues": [
     {
       "code": "MISSING_REQUIRED_PREDICATE",
-      "field_id": "state_code",
+      "field": "state_code",
       "severity": "BLOCKING",
       "message": "The predicate 'state_code' is required for this resource."
     },
     {
       "code": "INVALID_FORMAT",
-      "field_id": "closing_date",
+      "field": "closing_date",
       "severity": "BLOCKING",
       "message": "Value '23-01-01' does not match required format YYYY-MM-DD."
     },
     {
       "code": "FIELD_NOT_PERMITTED",
-      "field_id": "routing_number",
+      "field": "routing_number",
       "severity": "WARNING",
       "message": "Field 'routing_number' is masked and will be ignored in the result set."
     }
@@ -844,37 +876,29 @@ The response is designed to be programmatically parsed by the Agent to refine it
 
 The Hypervisor performs three distinct levels of validation during this call:
 
-|**Category**|**Validation Logic**|**Agent Action on Failure**|
-|---|---|---|
-|**Contractual**|Are all `REQUIRED` predicates present?|Re-read `Describe()` and find missing data.|
-|**Syntactic**|Do the values match the `format` (e.g., Date vs String)?|Re-format the value string (e.g., cast to ISO).|
-|**Policy**|Is the Agent allowed to see the requested `selection`?|Remove the offending field from the projection.|
-|**Cardinality**|Is the `IN` clause too large or the `limit` too high?|Narrow the search or reduce the `limit` parameter.|
+| **Category**    | **Validation Logic**                                     | **Agent Action on Failure**                        |
+| --------------- | -------------------------------------------------------- | -------------------------------------------------- |
+| **Contractual** | Are all `REQUIRED` predicates present?                   | Re-read `Describe()` and find missing data.        |
+| **Syntactic**   | Do the values match the `format` (e.g., Date vs String)? | Re-format the value string (e.g., cast to ISO).    |
+| **Policy**      | Is the Agent allowed to see the requested `selection`?   | Remove the offending field from the projection.    |
+| **Cardinality** | Is the `IN` clause too large or the `limit` too high?    | Narrow the search or reduce the `limit` parameter. |
 
 In the ADP architecture, the `validate()` stage is a crucial "pre-flight check." It allows the Agent to submit a draft **Execute IR** to the Hypervisor to check for policy, schema, and logic compliance without actually incurring the cost, latency, or side effects of data execution.
-
 
 ### G4. Normative Rules for the `Validate()` Spec
 
 1. **Idempotency**: `Validate()` MUST NOT change the state of the data backend.
-    
 2. **Context Preservation**: The `trace_id` from `Validate()` should ideally be linked to the subsequent `Execute()` call to show the "Correction Path."
-    
 3. **Severity Levels**:
-    
-    - **BLOCKING**: Execution will fail. The Agent _must_ fix this.
-        
-    - **WARNING**: Execution will proceed, but data may be truncated, masked, or different than expected.
-        
+   - **BLOCKING**: Execution will fail. The Agent _must_ fix this.
+   - **WARNING**: Execution will proceed, but data may be truncated, masked, or different than expected.
 
 ---
 
 ### G5. Why `Validate()` is separate from `Execute()`
 
 - **Cost Efficiency**: Prevents expensive BigQuery/Snowflake scans that would have failed anyway due to missing partition filters.
-    
 - **Security**: Prevents "Probe-based Exfiltration" where an agent tries different fields to see what sticks.
-    
 - **Agent Confidence**: Allows the Agent to iterate on its internal code generation until it achieves a `valid: true` state, ensuring a high "Success on First Strike" rate for the actual data pull.
 
 ## H. Unified View: The ADP Interface Flow
