@@ -216,9 +216,7 @@ export type PredicateOperator =
   | "IN" // Value in set
   | "LIKE" // Simple pattern match (case-sensitive)
   | "ILIKE" // Simple pattern match (case-insensitive)
-  | "COSINE_DISTANCE" // Vector cosine distance
-  | "L2_DISTANCE" // Vector Euclidean distance
-  | "INNER_PRODUCT"; // Vector inner product
+  | "SIMILAR"; // Vector similarity search
 
 /**
  * Logic operators supported for predicate expressions.
@@ -245,6 +243,38 @@ export type IssueSeverity = "BLOCKING" | "WARNING";
 export type ConsistencyLevel = "STRONG" | "EVENTUAL";
 
 /**
+ * Structured value for SIMILAR operator (vector similarity search).
+ *
+ * @category Common Types
+ */
+export interface SimilarValue {
+  /**
+   * Text content to search for similarity.
+   */
+  text?: string;
+
+  /**
+   * Binary content as Base64 or URI reference.
+   */
+  blob?: string;
+
+  /**
+   * Maximum number of results to return.
+   */
+  top?: number;
+
+  /**
+   * Similarity threshold (0.0 to 1.0).
+   */
+  threshold?: number;
+
+  /**
+   * Distance function to use (e.g., "COSINE", "L2", "INNER_PRODUCT").
+   */
+  distanceFunction?: string;
+}
+
+/**
  * A single predicate in an Intent IR.
  *
  * @category Common Types
@@ -262,8 +292,15 @@ export interface Predicate {
 
   /**
    * The value to compare against.
+   * For SIMILAR operator, this should be a SimilarValue object.
+   * For other operators, this can be a primitive value or array of primitives.
    */
-  value: string | number | boolean | (string | number | boolean)[];
+  value:
+    | string
+    | number
+    | boolean
+    | (string | number | boolean)[]
+    | SimilarValue;
 }
 
 /**
@@ -297,18 +334,18 @@ export interface IdentityPredicate {
  * {
  *   "op": "AND",
  *   "predicates": [
- *     { "field": "color", "op": "EQ", "value": "red" },
+ *     { "fieldId": "color", "op": "EQ", "value": "red" },
  *     {
  *       "op": "OR",
  *       "predicates": [
- *         { "field": "size", "op": "EQ", "value": "large" },
- *         { "field": "size", "op": "EQ", "value": "small" }
+ *         { "fieldId": "size", "op": "EQ", "value": "large" },
+ *         { "fieldId": "size", "op": "EQ", "value": "small" }
  *       ]
  *     },
  *     {
  *       "op": "NOT",
  *       "predicates": [
- *         { "field": "color", "op": "EQ", "value": "green" }
+ *         { "fieldId": "color", "op": "EQ", "value": "green" }
  *       ]
  *     }
  *   ]
@@ -321,7 +358,11 @@ export interface PredicateGroup {
   op: LogicOperator;
 
   /**
-   * The predicates to use. For "NOT" operator, the predicates should be a single predicate or predicate group.
+   * The predicates to use.
+   *
+   * Note: For the "NOT" operator, callers are expected by convention to supply
+   * exactly one predicate or predicate group, but this is not enforced by the
+   * type system and multiple predicates are still allowed here.
    */
   predicates: (Predicate | PredicateGroup)[];
 }
@@ -553,7 +594,7 @@ export interface Resource {
   /**
    * The unique domain-qualified identifier for this resource.
    */
-  resourcedId: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The version of this resource's schema.
@@ -771,7 +812,7 @@ export interface DescribeRequestParams extends PaginatedRequestParams {
   /**
    * The unique identifier of the resource to describe.
    */
-  resourcedId: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The intent class the Agent plans to use.

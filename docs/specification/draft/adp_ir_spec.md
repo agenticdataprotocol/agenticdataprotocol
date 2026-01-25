@@ -104,7 +104,7 @@ This table serves as the normative definition for all Agent interactions.
 
 | **Category**  | **Intent Class** | **Purpose**                                        | **Logic Mechanism**           | **Expected Output**  |
 | ------------- | ---------------- | -------------------------------------------------- | ----------------------------- | -------------------- |
-| **READ**      | **IDENTIFY**     | Retrieve 1 entity by unique key.                   | Identity Predicate            | Single Object        |
+| **READ**      | **LOOKUP**       | Retrieve 1 entity by unique key.                   | Identity Predicate            | Single Object        |
 | **READ**      | **QUERY**        | Retrieve a set of entities.                        | Boolean Predicates            | List of Objects      |
 | **READ**      | **PATH**         | Traverse **variable-depth** network linkages.      | Connectivity/Depth Predicates | Graph/Path/Tree      |
 | **READ**      | **CORRELATE**    | Merge distinct entity types via **shared keys**.   | Relationship/Join Predicates  | Merged/Flattened Set |
@@ -119,15 +119,15 @@ This table serves as the normative definition for all Agent interactions.
 
 This map shows how the Hypervisor translates the abstract **Intent Class** and **Predicates** into physical backend operations.
 
-| **Backend Type**   | **IDENTIFY (Point)** | **QUERY (Set)**        | **PATH **            | CORRLATE (Relationship)            | **REVISE (Update)**     | MERGE (Upsert)          |
-| ------------------ | -------------------- | ---------------------- | -------------------- | ---------------------------------- | ----------------------- | ----------------------- |
-| **RDBMS** (SQL)    | `PK` Lookup          | `SELECT ... WHERE`     | Recursive CTEs       | `INNER/LEFT/CROSS JOIN`            | `UPDATE ... WHERE`      | MERGE INTO              |
-| **BigQuery**       | N/A (Scan)           | Partitioned Scan       | N/A                  | Dataset/Table Joins                | DML Update              | N/A                     |
-| **Vector DB**      | `fetch(id)`          | Metadata Filter + NN   | N/A                  | Metadata-based lookup              | `upsert(id, vector)`    | upsert(id, vector)      |
-| **Graph DB**       | `MATCH (n) ID(n)`    | Property Filters       | `MATCH (p)-[r]->(q)` | `MATCH (a), (b) WHERE a.id = b.id` | `SET n.prop = x`        | MERGE (n:Label {id:x})  |
-| **NoSQL** (KV/Doc) | `GetItem`            | `Query` (GSI) / `Scan` | N/A                  | N/A                                | `UpdateItem`            | `PutItem` (Overwrites)  |
-| **Object Store**   | `GetObject`          | `ListObjects` + Prefix | N/A                  | Metadata-key cross-reference       | `PutObject` (Overwrite) | `PutObject` (Overwrite) |
-| **GraphQL**        | Query by ID          | Query w/ Args          | Nested Selection     | Argument-based Linkage             | Mutation                |                         |
+| **Backend Type**   | **LOOKUP (Point)** | **QUERY (Set)**        | **PATH **            | CORRLATE (Relationship)            | **REVISE (Update)**     | MERGE (Upsert)          |
+| ------------------ | ------------------ | ---------------------- | -------------------- | ---------------------------------- | ----------------------- | ----------------------- |
+| **RDBMS** (SQL)    | `PK` Lookup        | `SELECT ... WHERE`     | Recursive CTEs       | `INNER/LEFT/CROSS JOIN`            | `UPDATE ... WHERE`      | MERGE INTO              |
+| **BigQuery**       | N/A (Scan)         | Partitioned Scan       | N/A                  | Dataset/Table Joins                | DML Update              | N/A                     |
+| **Vector DB**      | `fetch(id)`        | Metadata Filter + NN   | N/A                  | Metadata-based lookup              | `upsert(id, vector)`    | upsert(id, vector)      |
+| **Graph DB**       | `MATCH (n) ID(n)`  | Property Filters       | `MATCH (p)-[r]->(q)` | `MATCH (a), (b) WHERE a.id = b.id` | `SET n.prop = x`        | MERGE (n:Label {id:x})  |
+| **NoSQL** (KV/Doc) | `GetItem`          | `Query` (GSI) / `Scan` | N/A                  | N/A                                | `UpdateItem`            | `PutItem` (Overwrites)  |
+| **Object Store**   | `GetObject`        | `ListObjects` + Prefix | N/A                  | Metadata-key cross-reference       | `PutObject` (Overwrite) | `PutObject` (Overwrite) |
+| **GraphQL**        | Query by ID        | Query w/ Args          | Nested Selection     | Argument-based Linkage             | Mutation                |                         |
 
 ## C. The "Required Predicate" Mechanism
 
@@ -232,7 +232,7 @@ Output: DiscoverResponse
       "intent_class": {
         "type": "string",
         "enum": [
-          "IDENTIFY", "QUERY", "PATH", "CORRELATE", "SUMMARIZE",
+          "LOOKUP", "QUERY", "PATH", "CORRELATE", "SUMMARIZE",
           "INGEST", "REVISE", "MERGE", "PRUNE"
         ]
       },
@@ -279,9 +279,9 @@ Output: DiscoverResponse
             "description": "The canonical catalog of available fields.",
             "items": {
               "type": "object",
-              "required": ["id", "type"],
+              "required": ["fieldId", "type"],
               "properties": {
-                "id": { "type": "string", "description": "The unique field_id." },
+                "fieldId": { "type": "string", "description": "The unique field identifier." },
                 "type": { "type": "string" },
                 "description": { "type": "string" },
                 "samples": { "type": "array", "items": { "type": "string" } },
@@ -305,9 +305,9 @@ Output: DiscoverResponse
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["field_id", "usage", "operators"],
+                  "required": ["fieldId", "usage", "operators"],
                   "properties": {
-                    "field_id": { "type": "string" },
+                    "fieldId": { "type": "string" },
                     "usage": { "enum": ["REQUIRED", "OPTIONAL"] },
                     "operators": { "type": "array", "items": { "type": "string" } },
                     "params": {
@@ -327,7 +327,7 @@ Output: DiscoverResponse
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "properties": { "field_id": { "type": "string" } }
+                  "properties": { "fieldId": { "type": "string" } }
                 }
               },
               "mutables": {
@@ -336,7 +336,7 @@ Output: DiscoverResponse
                 "items": {
                   "type": "object",
                   "properties": {
-                    "field_id": { "type": "string" },
+                    "fieldId": { "type": "string" },
                     "constraints": { "type": "object" }
                   }
                 }
@@ -388,34 +388,34 @@ In this example, the Agent is asking for a `QUERY` contract for a Bank Failure t
     "usage_contract": {
       "fields": [
         {
-          "field_id": "state_code",
+          "fieldId": "state_code",
           "type": "STRING",
           "description": "US State Abbreviation",
           "samples": ["NY", "FL"],
           "metadata": { "cardinality": 50, "format": "AA", "whitelist_only": true }
         },
         {
-          "field_id": "routing_number",
+          "fieldId": "routing_number",
           "type": "STRING",
           "description": "ABA Number",
           "is_masked": true
         },
         {
-	      "field_id": "failure_summary",
-	      "type": "STRING",
-	      "description": "Long-form text summary of the failure event.",
-	      "metadata": { "similarity_searchable": true }
+          "fieldId": "failure_summary",
+          "type": "STRING",
+          "description": "Long-form text summary of the failure event.",
+          "metadata": { "similarity_searchable": true }
         }
       ],
       "capabilities": {
         "predicates": [
-          { "field_id": "state_code", "usage": "REQUIRED", "operators": ["EQ", "IN"] }
-          { "field_id": "failure_summary", "usage": "OPTIONAL", "operators": ["SIMILAR"], "params": { "accepted_media_types": ["text/plain"], "distance_functions": ["COSINE"], "top_max": 20 } }
+          { "fieldId": "state_code", "usage": "REQUIRED", "operators": ["EQ", "IN"] },
+          { "fieldId": "failure_summary", "usage": "OPTIONAL", "operators": ["SIMILAR"], "params": { "accepted_media_types": ["text/plain"], "distance_functions": ["COSINE"], "top_max": 20 } }
         ],
         "projections": [
-          { "field_id": "state_code" },
-          { "field_id": "failure_summary" },
-          { "field_id": "routing_number" }
+          { "fieldId": "state_code" },
+          { "fieldId": "failure_summary" },
+          { "fieldId": "routing_number" }
         ],
         "mutables": []
       }
@@ -433,27 +433,27 @@ In this example, the Agent is asking for a `QUERY` contract for a Bank Failure t
     "usage_contract": {
       "fields": [
         {
-          "id": "st_abbr",
+          "fieldId": "st_abbr",
           "type": "STRING",
           "description": "State Abbreviation for Join",
           "metadata": { "hint": "Correlate this with bank_failures.state_code" }
         },
         {
-          "id": "pop_count",
+          "fieldId": "pop_count",
           "type": "INTEGER",
           "description": "Population"
         }
       ],
       "capabilities": {
         "predicates": [
-          { "field_id": "st_abbr", "usage": "REQUIRED", "operators": ["EQ"] }
+          { "fieldId": "st_abbr", "usage": "REQUIRED", "operators": ["EQ"] }
         ],
         "projections": [
-          { "field_id": "st_abbr" },
-          { "field_id": "pop_count" }
+          { "fieldId": "st_abbr" },
+          { "fieldId": "pop_count" }
         ],
         "mutables": [
-          { "field_id": "pop_count", "constraints": { "min": 0 } }
+          { "fieldId": "pop_count", "constraints": { "min": 0 } }
         ]
       }
     },
@@ -517,30 +517,52 @@ This specification is designed for **deterministic code generation**. By providi
     },
     "intent_class": {
       "type": "string",
-      "enum": ["IDENTIFY", "QUERY", "PATH", "CORRELATE", "SUMMARIZE", "INGEST", "REVISE", "MERGE", "PRUNE"]
+      "enum": ["LOOKUP", "QUERY", "PATH", "CORRELATE", "SUMMARIZE", "INGEST", "REVISE", "MERGE", "PRUNE"]
     },
     "predicates": {
-      "type": "array",
-      "description": "Filtering or target criteria.",
-      "items": {
-        "type": "object",
-        "required": ["field_id", "op", "value"],
-        "properties": {
-          "field_id": { "type": "string" },
-          "op": { "type": "string", "example": "SIMILAR, EQ, GT, IN" },
-          "value": {
+      "type": "object",
+      "description": "Filtering or target criteria as a predicate group with logic operators.",
+      "required": ["op", "predicates"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["AND", "OR", "NOT"],
+          "description": "Logic operator to combine predicates."
+        },
+        "predicates": {
+          "type": "array",
+          "description": "Array of predicates or nested predicate groups.",
+          "items": {
             "oneOf": [
-              { "type": ["string", "number", "boolean", "array"] },
               {
                 "type": "object",
-                "description": "Structured value for SIMILAR operator.",
+                "description": "A single predicate.",
+                "required": ["fieldId", "op", "value"],
                 "properties": {
-                  "text": { "type": "string" },
-                  "blob": { "type": "string", "description": "Base64 or URI reference." },
-                  "top": { "type": "integer" },
-                  "threshold": { "type": "number" },
-                  "distance_function": { "type": "string" }
+                  "fieldId": { "type": "string" },
+                  "op": { "type": "string", "example": "EQ, GT, IN, SIMILAR" },
+                  "value": {
+                    "oneOf": [
+                      { "type": ["string", "number", "boolean", "array"] },
+                      {
+                        "type": "object",
+                        "description": "Structured value for SIMILAR operator.",
+                        "properties": {
+                          "text": { "type": "string" },
+                          "blob": { "type": "string", "description": "Base64 or URI reference." },
+                          "top": { "type": "integer" },
+                          "threshold": { "type": "number" },
+                          "distance_function": { "type": "string" }
+                        }
+                      }
+                    ]
+                  }
                 }
+              },
+              {
+                "type": "object",
+                "description": "A nested predicate group.",
+                "$ref": "#/properties/predicates"
               }
             ]
           }
@@ -549,7 +571,7 @@ This specification is designed for **deterministic code generation**. By providi
     },
     "projections": {
       "type": "array",
-      "description": "List of field_ids to be returned in the result set.",
+      "description": "List of field identifiers to be returned in the result set.",
       "items": { "type": "string" }
     },
     "value_payload": {
@@ -561,6 +583,45 @@ This specification is designed for **deterministic code generation**. By providi
   }
 }
 ```
+
+#### PredicateGroup Structure
+
+The `predicates` field uses a **PredicateGroup** structure that allows complex logical combinations of predicates using AND, OR, and NOT operators. This enables nested predicate groups for sophisticated query construction.
+
+**Structure:**
+
+- `op`: Logic operator (`AND`, `OR`, or `NOT`)
+- `predicates`: Array of predicates or nested predicate groups
+
+**Example: Complex Nested Predicates**
+
+```JSON
+{
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      { "fieldId": "state_code", "op": "EQ", "value": "CA" },
+      {
+        "op": "OR",
+        "predicates": [
+          { "fieldId": "asset_size", "op": "GT", "value": 1000000000 },
+          { "fieldId": "asset_size", "op": "LT", "value": 5000000000 }
+        ]
+      },
+      {
+        "op": "NOT",
+        "predicates": [
+          { "fieldId": "status", "op": "EQ", "value": "ARCHIVED" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This translates to: `state_code = 'CA' AND (asset_size > 1B OR asset_size < 5B) AND NOT status = 'ARCHIVED'`
+
+**Note:** For the `NOT` operator, convention suggests providing exactly one predicate or predicate group, though the schema allows multiple.
 
 2. How the Agent Builds the Payload (Step-by-Step)
 
@@ -633,19 +694,30 @@ By nesting the data under a `results` key rather than returning a top-level arra
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "QUERY",
-  "predicates": [
-    {
-      "field_id": "state_code",
-      "op": "EQ",
-      "value": "CA"
-    },
-    {
-      "field_id": "closing_date",
-      "op": "GT",
-      "value": "2023-01-01"
-    },
-    { "field_id": "failure_summary", "op": "SIMILAR", "value": { "text": "liquidity risk", "top": 5, "distance_function": "COSINE" } }
-  ],
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "state_code",
+        "op": "EQ",
+        "value": "CA"
+      },
+      {
+        "fieldId": "closing_date",
+        "op": "GT",
+        "value": "2023-01-01"
+      },
+      {
+        "fieldId": "failure_summary",
+        "op": "SIMILAR",
+        "value": {
+          "text": "liquidity risk",
+          "top": 5,
+          "distance_function": "COSINE"
+        }
+      }
+    ]
+  },
   "projection": ["bank_name", "asset_size", "closing_date", "failure_summary"],
   "limit": 5
 }
@@ -681,9 +753,16 @@ The `MERGE` intent performs an idempotent upsert. If the identity predicate (`ba
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "MERGE",
-  "predicates": [
-    { "field_id": "bank_id", "op": "EQ", "value": "FDIC-10538" }
-  ],
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "bank_id",
+        "op": "EQ",
+        "value": "FDIC-10538"
+      }
+    ]
+  },
   "value_payload": {
     "bank_name": "Silicon Valley Bank",
     "asset_size": 209000000000,
@@ -747,11 +826,17 @@ The input is identical to the `Execute` payload, wrapping it in a validation con
 {
   "qualified_id": "com.acme.finance:bank_failures",
   "intent_class": "QUERY",
-  "predicates": [
-      { "field_id": "closing_date", "op": "GT", "value": "23-01-01" }
-    ],
-    "projection": ["bank_name", "routing_number"]
-
+  "predicates": {
+    "op": "AND",
+    "predicates": [
+      {
+        "fieldId": "closing_date",
+        "op": "GT",
+        "value": "23-01-01"
+      }
+    ]
+  },
+  "projection": ["bank_name", "routing_number"]
 }
 ```
 
@@ -765,19 +850,19 @@ The response is designed to be programmatically parsed by the Agent to refine it
   "issues": [
     {
       "code": "MISSING_REQUIRED_PREDICATE",
-      "field_id": "state_code",
+      "field": "state_code",
       "severity": "BLOCKING",
       "message": "The predicate 'state_code' is required for this resource."
     },
     {
       "code": "INVALID_FORMAT",
-      "field_id": "closing_date",
+      "field": "closing_date",
       "severity": "BLOCKING",
       "message": "Value '23-01-01' does not match required format YYYY-MM-DD."
     },
     {
       "code": "FIELD_NOT_PERMITTED",
-      "field_id": "routing_number",
+      "field": "routing_number",
       "severity": "WARNING",
       "message": "Field 'routing_number' is masked and will be ignored in the result set."
     }

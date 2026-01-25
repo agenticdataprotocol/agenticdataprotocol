@@ -106,14 +106,14 @@
                     "$ref": "#/$defs/IntentClass",
                     "description": "The intent class the Agent plans to use."
                 },
-                "resourcedId": {
+                "resourceId": {
                     "description": "The unique identifier of the resource to describe.",
                     "type": "string"
                 }
             },
             "required": [
                 "intentClass",
-                "resourcedId"
+                "resourceId"
             ],
             "type": "object"
         },
@@ -883,6 +883,9 @@
                 "value": {
                     "anyOf": [
                         {
+                            "$ref": "#/$defs/SimilarValue"
+                        },
+                        {
                             "items": {
                                 "type": [
                                     "string",
@@ -900,7 +903,7 @@
                             ]
                         }
                     ],
-                    "description": "The value to compare against."
+                    "description": "The value to compare against.\nFor SIMILAR operator, this should be a SimilarValue object.\nFor other operators, this can be a primitive value or array of primitives."
                 }
             },
             "required": [
@@ -944,7 +947,7 @@
                     "description": "The logic operator to use."
                 },
                 "predicates": {
-                    "description": "The predicates to use. For \"NOT\" operator, the predicates should be a single predicate or predicate group.",
+                    "description": "The predicates to use.\n\nNote: For the \"NOT\" operator, callers are expected by convention to supply\nexactly one predicate or predicate group, but this is not enforced by the\ntype system and multiple predicates are still allowed here.",
                     "items": {
                         "anyOf": [
                             {
@@ -968,18 +971,16 @@
             "description": "Operators supported for predicate expressions.",
             "enum": [
                 "CONTAINS",
-                "COSINE_DISTANCE",
                 "EQ",
                 "GT",
                 "GTE",
                 "ILIKE",
                 "IN",
-                "INNER_PRODUCT",
-                "L2_DISTANCE",
                 "LIKE",
                 "LT",
                 "LTE",
-                "NEQ"
+                "NEQ",
+                "SIMILAR"
             ],
             "type": "string"
         },
@@ -1100,7 +1101,7 @@
                     "$ref": "#/$defs/IntentClass",
                     "description": "The primary intent class this resource supports."
                 },
-                "resourcedId": {
+                "resourceId": {
                     "description": "The unique domain-qualified identifier for this resource.",
                     "type": "string"
                 },
@@ -1126,7 +1127,7 @@
             },
             "required": [
                 "intentClass",
-                "resourcedId",
+                "resourceId",
                 "summary",
                 "version"
             ],
@@ -1189,6 +1190,32 @@
                         "$ref": "#/$defs/IntentClass"
                     },
                     "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "SimilarValue": {
+            "description": "Structured value for SIMILAR operator (vector similarity search).",
+            "properties": {
+                "blob": {
+                    "description": "Binary content as Base64 or URI reference.",
+                    "type": "string"
+                },
+                "distanceFunction": {
+                    "description": "Distance function to use (e.g., \"COSINE\", \"L2\", \"INNER_PRODUCT\").",
+                    "type": "string"
+                },
+                "text": {
+                    "description": "Text content to search for similarity.",
+                    "type": "string"
+                },
+                "threshold": {
+                    "description": "Similarity threshold (0.0 to 1.0).",
+                    "type": "integer"
+                },
+                "top": {
+                    "description": "Maximum number of results to return.",
+                    "type": "integer"
                 }
             },
             "type": "object"
