@@ -1,0 +1,122 @@
+# Semantic Manifest Example
+# Maps physical data sources to ADP resources and defines the "Agent's View" of fields
+
+# ============================================================================
+# Bootstrap Mode - Simplest Setup
+# ============================================================================
+# Uncomment the following for full auto-discovery:
+# defaultDomain: "com.acme.finance"
+# # No resources array needed - all resources will be auto-discovered from physical.yaml
+# # For each backend, all sources (tables, collections, etc.) will be discovered
+# # ResourceIds will be auto-generated as "{defaultDomain}:{source}"
+# # Fields will be auto-discovered from backend schema
+
+# ============================================================================
+# Full Manual Definition
+# ============================================================================
+version: "1.0.0"
+defaultDomain: "com.acme.finance"
+
+resources:
+  # RDBMS Resource - Full definition
+  - resourceId: "com.acme.finance:bank_failures"
+    intentClass: "QUERY"
+    version: "1.0.0"
+    summary: "Bank failure records from FDIC"
+    semanticDescription: "Historical records of bank failures including FDIC certificate numbers, closing dates, and failure summaries."
+    tags:
+      - "FINANCE"
+      - "REGULATORY"
+      - "HISTORICAL"
+    backendId: "finance_sql"
+    source: "v_failures_consolidated"
+    fields:
+      - fieldId: "bank_id"
+        type: "STRING"
+        description: "FDIC Certificate Number"
+        isSearchable: false
+      - fieldId: "bank_name"
+        type: "STRING"
+        description: "Name of the failed bank"
+        isSearchable: true
+      - fieldId: "failure_summary"
+        type: "STRING"
+        description: "Long-form narrative of the failure event."
+        isSearchable: true
+      - fieldId: "closing_date"
+        type: "DATE"
+        description: "The date the institution was closed."
+        isSearchable: false
+      - fieldId: "assets"
+        type: "FLOAT"
+        description: "Total assets at time of failure"
+        isSearchable: false
+
+  # Vector Resource - Embeddings
+  - resourceId: "com.acme.finance:failure_vectors"
+    intentClass: "QUERY"
+    version: "1.0.0"
+    summary: "Vector embeddings of bank failure summaries"
+    backendId: "report_vectors"
+    source: "bank-summaries"
+    fields:
+      - fieldId: "summary_embedding"
+        type: "VECTOR"
+        description: "Vector embedding of the failure summary"
+        metadata:
+          vector:
+            dimensions: 1536
+            distanceFunction: "COSINE"
+      - fieldId: "bank_id"
+        type: "STRING"
+        description: "Reference to the bank record"
+      - fieldId: "metadata"
+        type: "JSON"
+        description: "Additional metadata about the embedding"
+
+  # S3 Resource - Object Storage
+  - resourceId: "com.acme.finance:reports"
+    intentClass: "QUERY"
+    version: "1.0.0"
+    summary: "Financial reports stored in S3"
+    backendId: "raw_storage"
+    source: "finance/reports/"
+    fields:
+      - fieldId: "report_id"
+        type: "STRING"
+        description: "Unique identifier for the report"
+      - fieldId: "report_date"
+        type: "DATE"
+        description: "Date of the report"
+      - fieldId: "report_type"
+        type: "STRING"
+        description: "Type of financial report"
+      - fieldId: "file_path"
+        type: "STRING"
+        description: "S3 path to the report file"
+      - fieldId: "file_size"
+        type: "INTEGER"
+        description: "Size of the file in bytes"
+
+# ============================================================================
+# Partial Bootstrap Mode Example
+# ============================================================================
+# You can also mix manual and bootstrap definitions:
+# defaultDomain: "com.acme.finance"
+# resources:
+#   # Minimal bootstrap definition - fields will be auto-discovered
+#   - backendId: "finance_sql"
+#     source: "v_failures_consolidated"
+#     # resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
+#     # fields will be auto-discovered from table schema
+#     # intentClass defaults to "QUERY"
+#     # version defaults to "1.0.0"
+#
+#   # Full manual definition
+#   - resourceId: "com.acme.finance:custom_view"
+#     backendId: "finance_sql"
+#     source: "custom_analytics_view"
+#     fields:
+#       - fieldId: "custom_field"
+#         type: "STRING"
+#         description: "Custom field definition"

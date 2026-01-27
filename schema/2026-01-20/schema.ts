@@ -243,6 +243,22 @@ export type IssueSeverity = "BLOCKING" | "WARNING";
 export type ConsistencyLevel = "STRONG" | "EVENTUAL";
 
 /**
+ * Supported field data types.
+ *
+ * @category Common Types
+ */
+export type FieldType =
+  | "STRING"
+  | "INTEGER"
+  | "FLOAT"
+  | "BOOLEAN"
+  | "DATE"
+  | "TIMESTAMP"
+  | "VECTOR"
+  | "BLOB"
+  | "JSON";
+
+/**
  * Structured value for SIMILAR operator (vector similarity search).
  *
  * @category Common Types
@@ -586,9 +602,9 @@ export interface DiscoverRequest extends JSONRPCRequest {
 }
 
 /**
- * A single resource returned in the DISCOVER response.
+ * Base resource information shared between protocol responses and curation manifests.
  *
- * @category `adp.discover`
+ * @category Common Types
  */
 export interface Resource {
   /**
@@ -599,7 +615,7 @@ export interface Resource {
   /**
    * The version of this resource's schema.
    */
-  version: string;
+  version?: string;
 
   /**
    * The primary intent class this resource supports.
@@ -609,7 +625,7 @@ export interface Resource {
   /**
    * A brief summary of the resource.
    */
-  summary: string;
+  summary?: string;
 
   /**
    * A detailed semantic description of the resource.
@@ -665,6 +681,32 @@ export interface FieldMetadata {
    * A hint for the Agent about how to use this field.
    */
   hint?: string;
+
+  /**
+   * For VECTOR fields, specifies vector dimensions and distance function.
+   */
+  vector?: {
+    /**
+     * Number of dimensions in the vector.
+     */
+    dimensions: number;
+
+    /**
+     * Distance function to use for similarity search.
+     * @example "COSINE", "L2", "INNER_PRODUCT"
+     */
+    distanceFunction?: string;
+  };
+
+  /**
+   * Sample values for this field (useful for whitelist validation).
+   */
+  samples?: (string | number | boolean)[];
+
+  /**
+   * Additional custom metadata.
+   */
+  [key: string]: unknown;
 }
 
 /**
@@ -682,7 +724,7 @@ export interface Field {
    * The data type of this field.
    * @example "STRING", "INTEGER", "BOOLEAN", "DATE"
    */
-  type: string;
+  type: FieldType;
 
   /**
    * Human-readable description of the field.
@@ -699,6 +741,12 @@ export interface Field {
    * @default false
    */
   isMasked?: boolean;
+
+  /**
+   * If true, this field supports similarity search (hint for SIMILAR operator).
+   * @default false
+   */
+  isSearchable?: boolean;
 
   /**
    * Additional metadata about the field.

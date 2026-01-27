@@ -391,6 +391,11 @@
                     "description": "If true, this field is masked/redacted by policy.",
                     "type": "boolean"
                 },
+                "isSearchable": {
+                    "default": false,
+                    "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
+                    "type": "boolean"
+                },
                 "metadata": {
                     "$ref": "#/$defs/FieldMetadata",
                     "description": "Additional metadata about the field."
@@ -401,8 +406,8 @@
                     "type": "array"
                 },
                 "type": {
-                    "description": "The data type of this field.",
-                    "type": "string"
+                    "$ref": "#/$defs/FieldType",
+                    "description": "The data type of this field."
                 }
             },
             "required": [
@@ -412,6 +417,7 @@
             "type": "object"
         },
         "FieldMetadata": {
+            "additionalProperties": {},
             "description": "Metadata about a field's characteristics.",
             "properties": {
                 "cardinality": {
@@ -429,12 +435,55 @@
                     "description": "A hint for the Agent about how to use this field.",
                     "type": "string"
                 },
+                "samples": {
+                    "description": "Sample values for this field (useful for whitelist validation).",
+                    "items": {
+                        "type": [
+                            "string",
+                            "integer",
+                            "boolean"
+                        ]
+                    },
+                    "type": "array"
+                },
+                "vector": {
+                    "description": "For VECTOR fields, specifies vector dimensions and distance function.",
+                    "properties": {
+                        "dimensions": {
+                            "description": "Number of dimensions in the vector.",
+                            "type": "integer"
+                        },
+                        "distanceFunction": {
+                            "description": "Distance function to use for similarity search.",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "dimensions"
+                    ],
+                    "type": "object"
+                },
                 "whitelistOnly": {
                     "description": "If true, only values from provided samples/examples are valid.",
                     "type": "boolean"
                 }
             },
             "type": "object"
+        },
+        "FieldType": {
+            "description": "Supported field data types.",
+            "enum": [
+                "BLOB",
+                "BOOLEAN",
+                "DATE",
+                "FLOAT",
+                "INTEGER",
+                "JSON",
+                "STRING",
+                "TIMESTAMP",
+                "VECTOR"
+            ],
+            "type": "string"
         },
         "IdentityPredicate": {
             "description": "An identity predicate used for unique key lookups.\nOnly allows the EQ operator to ensure exact matching.",
@@ -1095,7 +1144,7 @@
             "type": "object"
         },
         "Resource": {
-            "description": "A single resource returned in the DISCOVER response.",
+            "description": "Base resource information shared between protocol responses and curation manifests.",
             "properties": {
                 "intentClass": {
                     "$ref": "#/$defs/IntentClass",
@@ -1127,9 +1176,7 @@
             },
             "required": [
                 "intentClass",
-                "resourceId",
-                "summary",
-                "version"
+                "resourceId"
             ],
             "type": "object"
         },
