@@ -220,9 +220,7 @@ async function main(): Promise<void> {
     console.log("\nGenerating curation manifest schemas...\n");
 
     await Promise.all(
-      SCHEMA_VERSIONS.map((version) =>
-        generateCurationSchemas(version, false),
-      ),
+      SCHEMA_VERSIONS.map((version) => generateCurationSchemas(version, false)),
     );
 
     console.log("\nSchema generation complete!");

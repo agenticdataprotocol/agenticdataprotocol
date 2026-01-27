@@ -12,9 +12,7 @@
 import type {
   ResourceId,
   PredicateOperator,
-  FieldMetadata,
   Field,
-  FieldType,
   Resource,
   SortOrder,
 } from "./schema";
@@ -33,7 +31,7 @@ export type BackendType =
   | "VECTOR" // Vector databases (Pinecone, Weaviate, etc.)
   | "S3" // Object storage (AWS S3, MinIO, etc.)
   | "NOSQL" // NoSQL databases (MongoDB, DynamoDB, etc.)
-  | "GRAPH" // Graph databases (Neo4j, etc.)
+  | "GRAPH"; // Graph databases (Neo4j, etc.)
 
 /* ============================================================================
  * Physical Manifest Types
@@ -472,7 +470,6 @@ export interface SemanticManifest {
  * @category Curation Policy Manifest
  */
 export type PolicyCondition = string;
-
 
 /**
  * Mandatory filter rule that enforces required predicates.
