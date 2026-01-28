@@ -1147,8 +1147,11 @@
             "description": "Base resource information shared between protocol responses and curation manifests.",
             "properties": {
                 "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The primary intent class this resource supports."
+                    "description": "The  intent class this resource supports.",
+                    "items": {
+                        "$ref": "#/$defs/IntentClass"
+                    },
+                    "type": "array"
                 },
                 "resourceId": {
                     "description": "The unique domain-qualified identifier for this resource.",

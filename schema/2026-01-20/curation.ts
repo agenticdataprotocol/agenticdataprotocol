@@ -266,80 +266,15 @@ export interface PhysicalManifest {
  * ============================================================================ */
 
 /**
- * Definition of a resource in the semantic layer.
- * Extends Resource with curation-specific fields for backend binding and field definitions.
- *
- * **Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal
- * information and let the system auto-discover the rest:
- * - If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)
- * - If `source` is omitted, all sources from the backend will be discovered and resources created for each
- * - If `fields` is omitted or empty, fields will be auto-discovered from the backend schema
- * - If `intentClass` is omitted, defaults to `"QUERY"`
- * - If `version` is omitted, defaults to `"1.0.0"`
- * - If `summary` is omitted, will be auto-generated from source name
- * - If `semanticDescription` is omitted, will be auto-generated from backend metadata if available
- * - If `tags` is omitted, will be auto-generated from backend type and source
+ * Definition of a source within a resource.
+ * Each source represents a specific data source (table, collection, prefix, etc.)
+ * within a backend, with its own field definitions.
  *
  * @category Curation Semantic Manifest
- * @example
- * // Full manual definition
- * {
- *   "resourceId": "com.acme.finance:bank_failures",
- *   "intentClass": "QUERY",
- *   "version": "1.0.0",
- *   "summary": "Bank failure records",
- *   "backendId": "finance_sql",
- *   "source": "v_failures_consolidated",
- *   "fields": [
- *     { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *     { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
- *   ]
- * }
- * @example
- * // Bootstrap mode - minimal definition (auto-discover fields)
- * {
- *   "backendId": "finance_sql",
- *   "source": "v_failures_consolidated"
- *   // resourceId, intentClass, version, summary, fields will be auto-generated
- * }
- * @example
- * // Bootstrap mode - discover all tables from backend
- * {
- *   "backendId": "finance_sql"
- *   // source omitted = discover all tables/views and create resources for each
- * }
- * @example
- * // Vector backend
- * {
- *   "resourceId": "com.acme.finance:failure_vectors",
- *   "backendId": "report_vectors",
- *   "source": "bank-summaries",
- *   "fields": [
- *     { "fieldId": "summary_embedding", "type": "VECTOR", "metadata": { "vector": { "dimensions": 1536 } } }
- *   ]
- * }
- * @example
- * // S3 backend
- * {
- *   "resourceId": "com.acme.finance:reports",
- *   "backendId": "raw_storage",
- *   "source": "finance/reports/",
- *   "fields": [...]
- * }
  */
-export interface CuratedResource extends Resource {
-  /**
-   * Reference to the backend in physical.yaml that provides this resource.
-   * Required.
-   */
-  backendId: string;
-
+export interface SourceDefinition {
   /**
    * Source identifier in the backend.
-   *
-   * **Bootstrap behavior**: If omitted, the system will discover all available sources
-   * from the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)
-   * and create a resource for each one.
    *
    * Interpretation depends on the backend type:
    * - RDBMS: table or view name (e.g., "v_failures_consolidated")
@@ -348,10 +283,10 @@ export interface CuratedResource extends Resource {
    * - NoSQL: collection or namespace name
    * - Graph: node label or pattern
    */
-  source?: string;
+  source: string;
 
   /**
-   * Field definitions for this resource.
+   * Field definitions for this source.
    *
    * **Bootstrap behavior**: If omitted or empty, fields will be auto-discovered from
    * the backend schema by introspecting the source structure:
@@ -366,6 +301,94 @@ export interface CuratedResource extends Resource {
    * Descriptions will be extracted from backend comments/metadata if available.
    */
   fields?: Field[];
+}
+
+/**
+ * Definition of a resource in the semantic layer.
+ * Extends Resource with curation-specific fields for backend binding and source definitions.
+ *
+ * **Current Limitation**: While `sources` is defined as an array, currently only a single
+ * source element is supported. The array structure is preserved for future support of
+ * multiple sources per resource. When multiple sources are needed, create separate
+ * resources with different resourceIds.
+ *
+ * **Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal
+ * information and let the system auto-discover the rest:
+ * - If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)
+ * - If `sources` is omitted, all sources from the backend will be discovered and a resource created for each
+ * - If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema
+ * - If `intentClass` is omitted, defaults to `["QUERY"]`
+ * - If `version` is omitted, defaults to `"1.0.0"`
+ * - If `summary` is omitted, will be auto-generated from source name
+ * - If `semanticDescription` is omitted, will be auto-generated from backend metadata if available
+ * - If `tags` is omitted, will be auto-generated from backend type and source
+ *
+ * @category Curation Semantic Manifest
+ * @example
+ * // Full manual definition - single source (current supported format)
+ * {
+ *   "resourceId": "com.acme.finance:bank_failures",
+ *   "intentClass": ["QUERY"],
+ *   "version": "1.0.0",
+ *   "summary": "Bank failure records",
+ *   "backendId": "finance_sql",
+ *   "sources": [
+ *     {
+ *       "source": "v_failures_consolidated",
+ *       "fields": [
+ *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * @example
+ * // Bootstrap mode - minimal definition (auto-discover fields)
+ * {
+ *   "backendId": "finance_sql",
+ *   "sources": [
+ *     { "source": "v_failures_consolidated" }
+ *     // fields will be auto-discovered from table schema
+ *   ]
+ *   // resourceId, intentClass, version, summary will be auto-generated
+ * }
+ * @example
+ * // Bootstrap mode - discover all sources from backend
+ * {
+ *   "backendId": "finance_sql"
+ *   // sources omitted = discover all tables/views and create a resource for each
+ * }
+ * @example
+ * // Future: Multiple sources per resource (not yet supported)
+ * // Currently, create separate resources instead:
+ * // - resourceId: "com.acme.finance:bank_failures" with source: "bank_failures"
+ * // - resourceId: "com.acme.finance:bank_mergers" with source: "bank_mergers"
+ */
+export interface CuratedResource extends Resource {
+  /**
+   * Reference to the backend in physical.yaml that provides this resource.
+   * Required.
+   */
+  backendId: string;
+
+  /**
+   * List of source definitions for this resource.
+   *
+   * **Current Limitation**: Currently only a single source element is supported.
+   * The array structure is preserved for future support of multiple sources per resource.
+   * When multiple sources are needed, create separate resources with different resourceIds.
+   *
+   * Each source represents a specific data source within the backend (table, collection, etc.)
+   * and has its own field definitions.
+   *
+   * **Bootstrap behavior**: If omitted, the system will discover all available sources
+   * from the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)
+   * and create a separate resource for each discovered source.
+   *
+   * If provided but a source's `fields` is omitted or empty, fields will be auto-discovered
+   * for that specific source.
+   */
+  sources?: SourceDefinition[];
 }
 
 /**
@@ -393,10 +416,14 @@ export interface CuratedResource extends Resource {
  *     {
  *       "resourceId": "com.acme.finance:bank_failures",
  *       "backendId": "finance_sql",
- *       "source": "v_failures_consolidated",
- *       "fields": [
- *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *       "sources": [
+ *         {
+ *           "source": "v_failures_consolidated",
+ *           "fields": [
+ *             { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *             { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *           ]
+ *         }
  *       ]
  *     }
  *   ]
@@ -408,9 +435,11 @@ export interface CuratedResource extends Resource {
  *   "resources": [
  *     {
  *       "backendId": "finance_sql",
- *       "source": "v_failures_consolidated"
+ *       "sources": [
+ *         { "source": "v_failures_consolidated" }
+ *         // fields will be auto-discovered from table schema
+ *       ]
  *       // resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
- *       // fields will be auto-discovered from table schema
  *     }
  *   ]
  *   // Other backends in physical.yaml will still be auto-discovered
@@ -446,9 +475,9 @@ export interface SemanticManifest {
    * **Bootstrap behavior**: If omitted, the system will automatically discover all resources
    * from all backends defined in `physical.yaml` at runtime:
    * - For each backend, all available sources will be discovered (tables, collections, prefixes, etc.)
-   * - A resource will be created for each discovered source
+   * - A separate resource will be created for each discovered source (one source per resource)
    * - ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)
-   * - Fields will be auto-discovered from backend schema introspection
+   * - Fields will be auto-discovered from backend schema introspection for each source
    * - All other resource properties (intentClass, version, summary, etc.) will use defaults
    *
    * If provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).

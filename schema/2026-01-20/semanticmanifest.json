@@ -2,22 +2,18 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$defs": {
         "CuratedResource": {
-            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and field definitions.\n\n**Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal\ninformation and let the system auto-discover the rest:\n- If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)\n- If `source` is omitted, all sources from the backend will be discovered and resources created for each\n- If `fields` is omitted or empty, fields will be auto-discovered from the backend schema\n- If `intentClass` is omitted, defaults to `\"QUERY\"`\n- If `version` is omitted, defaults to `\"1.0.0\"`\n- If `summary` is omitted, will be auto-generated from source name\n- If `semanticDescription` is omitted, will be auto-generated from backend metadata if available\n- If `tags` is omitted, will be auto-generated from backend type and source",
+            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal\ninformation and let the system auto-discover the rest:\n- If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)\n- If `sources` is omitted, all sources from the backend will be discovered and a resource created for each\n- If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema\n- If `intentClass` is omitted, defaults to `[\"QUERY\"]`\n- If `version` is omitted, defaults to `\"1.0.0\"`\n- If `summary` is omitted, will be auto-generated from source name\n- If `semanticDescription` is omitted, will be auto-generated from backend metadata if available\n- If `tags` is omitted, will be auto-generated from backend type and source",
             "properties": {
                 "backendId": {
                     "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
                     "type": "string"
                 },
-                "fields": {
-                    "description": "Field definitions for this resource.\n\n**Bootstrap behavior**: If omitted or empty, fields will be auto-discovered from\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
+                "intentClass": {
+                    "description": "The  intent class this resource supports.",
                     "items": {
-                        "$ref": "#/$defs/Field"
+                        "$ref": "#/$defs/IntentClass"
                     },
                     "type": "array"
-                },
-                "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The primary intent class this resource supports."
                 },
                 "resourceId": {
                     "description": "The unique domain-qualified identifier for this resource.",
@@ -27,9 +23,12 @@
                     "description": "A detailed semantic description of the resource.",
                     "type": "string"
                 },
-                "source": {
-                    "description": "Source identifier in the backend.\n\n**Bootstrap behavior**: If omitted, the system will discover all available sources\nfrom the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)\nand create a resource for each one.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\")\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
-                    "type": "string"
+                "sources": {
+                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, etc.)\nand has its own field definitions.\n\n**Bootstrap behavior**: If omitted, the system will discover all available sources\nfrom the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)\nand create a separate resource for each discovered source.\n\nIf provided but a source's `fields` is omitted or empty, fields will be auto-discovered\nfor that specific source.",
+                    "items": {
+                        "$ref": "#/$defs/SourceDefinition"
+                    },
+                    "type": "array"
                 },
                 "summary": {
                     "description": "A brief summary of the resource.",
@@ -174,6 +173,26 @@
                 "SYNTHESIZE"
             ],
             "type": "string"
+        },
+        "SourceDefinition": {
+            "description": "Definition of a source within a resource.\nEach source represents a specific data source (table, collection, prefix, etc.)\nwithin a backend, with its own field definitions.",
+            "properties": {
+                "fields": {
+                    "description": "Field definitions for this source.\n\n**Bootstrap behavior**: If omitted or empty, fields will be auto-discovered from\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
+                    "items": {
+                        "$ref": "#/$defs/Field"
+                    },
+                    "type": "array"
+                },
+                "source": {
+                    "description": "Source identifier in the backend.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\")\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "source"
+            ],
+            "type": "object"
         }
     },
     "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `resources` array entirely.\nThe system will automatically discover all resources from all backends defined in `physical.yaml`\nat runtime. Just set `defaultDomain` to enable auto-generation of resourceIds.",
@@ -183,7 +202,7 @@
             "type": "string"
         },
         "resources": {
-            "description": "List of resource definitions.\n\n**Bootstrap behavior**: If omitted, the system will automatically discover all resources\nfrom all backends defined in `physical.yaml` at runtime:\n- For each backend, all available sources will be discovered (tables, collections, prefixes, etc.)\n- A resource will be created for each discovered source\n- ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)\n- Fields will be auto-discovered from backend schema introspection\n- All other resource properties (intentClass, version, summary, etc.) will use defaults\n\nIf provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).\nBootstrap resources will have missing fields auto-generated during manifest processing.\nResources explicitly defined here will be used; other backends may still be auto-discovered\ndepending on implementation behavior.",
+            "description": "List of resource definitions.\n\n**Bootstrap behavior**: If omitted, the system will automatically discover all resources\nfrom all backends defined in `physical.yaml` at runtime:\n- For each backend, all available sources will be discovered (tables, collections, prefixes, etc.)\n- A separate resource will be created for each discovered source (one source per resource)\n- ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)\n- Fields will be auto-discovered from backend schema introspection for each source\n- All other resource properties (intentClass, version, summary, etc.) will use defaults\n\nIf provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).\nBootstrap resources will have missing fields auto-generated during manifest processing.\nResources explicitly defined here will be used; other backends may still be auto-discovered\ndepending on implementation behavior.",
             "items": {
                 "$ref": "#/$defs/CuratedResource"
             },

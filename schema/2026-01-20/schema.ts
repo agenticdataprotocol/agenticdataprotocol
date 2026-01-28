@@ -618,9 +618,9 @@ export interface Resource {
   version?: string;
 
   /**
-   * The primary intent class this resource supports.
+   * The  intent class this resource supports.
    */
-  intentClass: IntentClass;
+  intentClass: IntentClass[];
 
   /**
    * A brief summary of the resource.

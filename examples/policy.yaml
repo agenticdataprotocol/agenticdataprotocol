@@ -1,5 +1,10 @@
 # Policy Manifest Example
 # Defines governance rules and constraints for resource access
+#
+# NOTE: Currently, resources support only a single source. The `source` field
+# in policy rules (MandatoryFilterRule and defaultOrderBy) is optional and
+# can be omitted for single-source resources. The field is reserved for
+# future support of multiple sources per resource.
 
 # ============================================================================
 # Bootstrap Mode - No Enforcements
@@ -15,10 +20,11 @@
 version: "1.0.0"
 
 policies:
-  # Policy for bank failures resource
+  # Policy for single-source resource - source field can be omitted
   - resourceId: "com.acme.finance:bank_failures"
     rules:
       # Mandatory filter: enforce data freshness
+      # source omitted - OK because resource has only one source (current limitation)
       - type: "MANDATORY_FILTER"
         fieldId: "closing_date"
         op: "GT"
@@ -26,6 +32,7 @@ policies:
         condition: "agent_tier == 'PRODUCTION'"
 
       # Operational constraint: limit results and default sorting
+      # source omitted in defaultOrderBy - OK because resource has only one source
       - type: "OPERATIONAL"
         enforceLimit: 100
         defaultOrderBy:
