@@ -317,8 +317,10 @@ export interface SourceDefinition {
  * - If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)
  * - If `sources` is omitted, all sources from the backend will be discovered and a resource created for each
  * - If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema
- * - If `intentClass` is omitted, defaults to `["QUERY"]`
- * - If `version` is omitted, defaults to `"1.0.0"`
+ * - If `intentClasses` is omitted, defaults to `["*"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+ * - If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)
+ * - If `intentClasses` contains `"*"`, acts as a wildcard accepting any intent class
+ * - If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)
  * - If `summary` is omitted, will be auto-generated from source name
  * - If `semanticDescription` is omitted, will be auto-generated from backend metadata if available
  * - If `tags` is omitted, will be auto-generated from backend type and source
@@ -328,8 +330,44 @@ export interface SourceDefinition {
  * // Full manual definition - single source (current supported format)
  * {
  *   "resourceId": "com.acme.finance:bank_failures",
- *   "intentClass": ["QUERY"],
- *   "version": "1.0.0",
+ *   "intentClasses": ["QUERY"],
+ *   "version": 1,
+ *   "summary": "Bank failure records",
+ *   "backendId": "finance_sql",
+ *   "sources": [
+ *     {
+ *       "source": "v_failures_consolidated",
+ *       "fields": [
+ *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * @example
+ * // Wildcard intent class - explicit wildcard using "*"
+ * {
+ *   "resourceId": "com.acme.finance:bank_failures",
+ *   "intentClasses": ["*"],
+ *   "version": 1,
+ *   "summary": "Bank failure records",
+ *   "backendId": "finance_sql",
+ *   "sources": [
+ *     {
+ *       "source": "v_failures_consolidated",
+ *       "fields": [
+ *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * @example
+ * // Wildcard intent class - omit intentClasses (defaults to ["*"])
+ * {
+ *   "resourceId": "com.acme.finance:bank_failures",
+ *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
+ *   "version": 1,
  *   "summary": "Bank failure records",
  *   "backendId": "finance_sql",
  *   "sources": [
@@ -350,7 +388,10 @@ export interface SourceDefinition {
  *     { "source": "v_failures_consolidated" }
  *     // fields will be auto-discovered from table schema
  *   ]
- *   // resourceId, intentClass, version, summary will be auto-generated
+ *   // resourceId will be auto-generated
+ *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
+ *   // version omitted = defaults to 1 (version numbers start from 1)
+ *   // summary will be auto-generated
  * }
  * @example
  * // Bootstrap mode - discover all sources from backend
@@ -392,6 +433,29 @@ export interface CuratedResource extends Resource {
 }
 
 /**
+ * Intent class support for CuratedResource.
+ *
+ * **Default Behavior**: If `intentClasses` is omitted, it defaults to `["*"]` (wildcard),
+ * which accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE).
+ *
+ * **Wildcard Intent Class**: The resource can accept any intent class by:
+ * 1. Omitting `intentClasses` (defaults to `["*"]`)
+ * 2. Explicitly specifying `["*"]` (explicit wildcard)
+ *
+ * When `intentClasses` contains `"*"`, it acts as a wildcard and accepts any intent class.
+ * If `"*"` is included with other intent classes (e.g., `["QUERY", "*"]`), the wildcard
+ * takes precedence and all intent classes are accepted.
+ *
+ * **Empty Array**: If `intentClasses` is an empty array `[]`, no intent classes are accepted.
+ * The resource will reject all requests regardless of intent class. This effectively disables
+ * the resource.
+ *
+ * **Specific Intent Classes**: When `intentClasses` is specified with specific values
+ * (e.g., `["QUERY", "LOOKUP"]`), only those listed intent classes are supported.
+ * The resource will reject requests with intent classes not in the list.
+ */
+
+/**
  * Root structure for the semantic manifest (semantic.yaml).
  *
  * **Bootstrap Mode**: For the simplest setup, you can omit the `resources` array entirely.
@@ -411,7 +475,7 @@ export interface CuratedResource extends Resource {
  * @example
  * // Full manual definition
  * {
- *   "version": "1.0.0",
+ *   "version": "1.0.0",  // manifest schema version (string)
  *   "resources": [
  *     {
  *       "resourceId": "com.acme.finance:bank_failures",
@@ -478,7 +542,9 @@ export interface SemanticManifest {
    * - A separate resource will be created for each discovered source (one source per resource)
    * - ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)
    * - Fields will be auto-discovered from backend schema introspection for each source
-   * - All other resource properties (intentClass, version, summary, etc.) will use defaults
+   * - `intentClasses` will default to `["*"]` (wildcard - accepts any intent class)
+   * - `version` will default to `1` (version numbers start from 1)
+   * - All other resource properties (summary, etc.) will use defaults
    *
    * If provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).
    * Bootstrap resources will have missing fields auto-generated during manifest processing.

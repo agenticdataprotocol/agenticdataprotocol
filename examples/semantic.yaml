@@ -26,8 +26,8 @@ defaultDomain: "com.acme.finance"
 resources:
   # RDBMS Resource - Full definition with single source
   - resourceId: "com.acme.finance:bank_failures"
-    intentClass: ["QUERY"]
-    version: "1.0.0"
+    intentClasses: ["QUERY"]
+    version: 1  # Resource version number (starts from 1; default 1 if omitted)
     summary: "Bank failure records from FDIC"
     semanticDescription: "Historical records of bank failures including FDIC certificate numbers, closing dates, and failure summaries."
     tags:
@@ -64,10 +64,90 @@ resources:
   # - resourceId: "com.acme.finance:bank_failures" with source: "bank_failures"
   # - resourceId: "com.acme.finance:bank_mergers" with source: "bank_mergers"
 
+  # ============================================================================
+  # Multi-Version Resource Example
+  # ============================================================================
+  # Same resourceId with different version numbers. adp.describe without version
+  # returns the latest version; adp.describe with version: 1 or version: 2 returns
+  # that version's usage contract.
+
+  # Version 1 - original schema (fewer fields)
+  - resourceId: "com.acme.finance:audit_events"
+    version: 1
+    intentClasses: ["QUERY"]
+    summary: "Audit events (v1 - core fields only)"
+    backendId: "finance_sql"
+    sources:
+      - source: "audit_events"
+        fields:
+          - fieldId: "event_id"
+            type: "STRING"
+            description: "Unique event identifier"
+          - fieldId: "event_type"
+            type: "STRING"
+            description: "Type of audit event"
+          - fieldId: "created_at"
+            type: "TIMESTAMP"
+            description: "When the event occurred"
+
+  # Version 2 - extended schema (additional fields)
+  - resourceId: "com.acme.finance:audit_events"
+    version: 2
+    intentClasses: ["QUERY"]
+    summary: "Audit events (v2 - with actor and severity)"
+    backendId: "finance_sql"
+    sources:
+      - source: "audit_events"
+        fields:
+          - fieldId: "event_id"
+            type: "STRING"
+            description: "Unique event identifier"
+          - fieldId: "event_type"
+            type: "STRING"
+            description: "Type of audit event"
+          - fieldId: "created_at"
+            type: "TIMESTAMP"
+            description: "When the event occurred"
+          - fieldId: "actor_id"
+            type: "STRING"
+            description: "ID of the user or system that performed the action (v2)"
+          - fieldId: "severity"
+            type: "STRING"
+            description: "Event severity: LOW, MEDIUM, HIGH (v2)"
+
+  # Wildcard Intent Class Example - explicit wildcard using "*"
+  - resourceId: "com.acme.finance:universal_resource"
+    intentClasses: ["*"]  # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+    version: 1
+    summary: "Universal resource supporting all intent classes"
+    backendId: "finance_sql"
+    sources:
+      - source: "universal_table"
+        fields:
+          - fieldId: "id"
+            type: "STRING"
+            description: "Unique identifier"
+          - fieldId: "data"
+            type: "JSON"
+            description: "Flexible data payload"
+
+  # Wildcard Intent Class Example - omit intentClasses (same as ["*"])
+  - resourceId: "com.acme.finance:flexible_resource"
+    # intentClasses omitted = defaults to ["*"] (wildcard)
+    # version omitted = defaults to 1
+    summary: "Flexible resource with omitted intentClasses"
+    backendId: "finance_sql"
+    sources:
+      - source: "flexible_table"
+        fields:
+          - fieldId: "id"
+            type: "STRING"
+            description: "Unique identifier"
+
   # Vector Resource - Embeddings
   - resourceId: "com.acme.finance:failure_vectors"
-    intentClass: ["QUERY"]
-    version: "1.0.0"
+    intentClasses: ["QUERY"]
+    version: 1
     summary: "Vector embeddings of bank failure summaries"
     backendId: "report_vectors"
     sources:
@@ -89,8 +169,8 @@ resources:
 
   # S3 Resource - Object Storage
   - resourceId: "com.acme.finance:reports"
-    intentClass: ["QUERY"]
-    version: "1.0.0"
+    intentClasses: ["QUERY"]
+    version: 1
     summary: "Financial reports stored in S3"
     backendId: "raw_storage"
     sources:
@@ -124,8 +204,8 @@ resources:
 #       - source: "v_failures_consolidated"
 #         # fields will be auto-discovered from table schema
 #     # resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
-#     # intentClass defaults to ["QUERY"]
-#     # version defaults to "1.0.0"
+#     # intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+#     # version omitted = defaults to 1 (version numbers start from 1)
 #
 #   # Full manual definition with single source (current limitation)
 #   - resourceId: "com.acme.finance:custom_view"
