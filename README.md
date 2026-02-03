@@ -28,13 +28,12 @@ ADP uses **JSON-RPC 2.0** as its transport format. All communication follows the
 
 ## Intent Classes
 
-| Category  | Intent       | Description                                        |
-| --------- | ------------ | -------------------------------------------------- |
-| READ      | `LOOKUP`     | Retrieve single entity by unique key               |
-| READ      | `QUERY`      | Retrieve entity set using boolean predicates       |
-| WRITE     | `INGEST`     | Create/append new data                             |
-| WRITE     | `REVISE`     | Update existing entries                            |
-| COGNITIVE | `SYNTHESIZE` | Transform/extract structure from unstructured data |
+| Category | Intent   | Description                                  |
+| -------- | -------- | -------------------------------------------- |
+| READ     | `LOOKUP` | Retrieve single entity by unique key         |
+| READ     | `QUERY`  | Retrieve entity set using boolean predicates |
+| WRITE    | `INGEST` | Create/append new data                       |
+| WRITE    | `REVISE` | Update existing entries                      |
 
 ## Installation
 

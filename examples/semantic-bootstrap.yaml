@@ -17,6 +17,6 @@ defaultDomain: "com.acme.finance"
 # 4. Auto-generate resourceIds as "{defaultDomain}:{source}" (sanitized)
 # 5. Auto-discover fields from backend schema
 # 6. Apply defaults:
-#    - intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+#    - intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)
 #    - version=1 (resource version number; default 1 if omitted)
 #    - description auto-generated from source name

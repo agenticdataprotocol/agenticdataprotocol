@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$defs": {
         "CuratedResource": {
-            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal\ninformation and let the system auto-discover the rest:\n- If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)\n- If `sources` is omitted, all sources from the backend will be discovered and a resource created for each\n- If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema\n- If `intentClasses` is omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)\n- If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)\n- If `intentClasses` contains `\"*\"`, acts as a wildcard accepting any intent class\n- If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)\n- If `description` is omitted, will be auto-generated from source name\n- If `semanticDescription` is omitted, will be auto-generated from backend metadata if available\n- If `tags` is omitted, will be auto-generated from backend type and source",
+            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal\ninformation and let the system auto-discover the rest:\n- If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)\n- If `sources` is omitted, all sources from the backend will be discovered and a resource created for each\n- If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema\n- If `intentClasses` is omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)\n- If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)\n- If `intentClasses` contains `\"*\"`, acts as a wildcard accepting any intent class\n- If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)\n- If `description` is omitted, will be auto-generated from source name\n- If `semanticDescription` is omitted, will be auto-generated from backend metadata if available\n- If `tags` is omitted, will be auto-generated from backend type and source",
             "properties": {
                 "backendId": {
                     "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
@@ -13,7 +13,7 @@
                     "type": "string"
                 },
                 "intentClasses": {
-                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
                     "items": {
                         "$ref": "#/$defs/IntentClass"
                     },
@@ -157,14 +157,13 @@
             "type": "string"
         },
         "IntentClass": {
-            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
+            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
             "enum": [
                 "*",
                 "INGEST",
                 "LOOKUP",
                 "QUERY",
-                "REVISE",
-                "SYNTHESIZE"
+                "REVISE"
             ],
             "type": "string"
         },

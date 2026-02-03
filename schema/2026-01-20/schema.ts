@@ -187,18 +187,9 @@ export type TraceId = string;
  * - `INGEST` - Create or append new data entries
  * - `REVISE` - Update existing entries (full or partial)
  *
- * COGNITIVE operations:
- * - `SYNTHESIZE` - Transform/Extract structure from unstructured data
- *
  * @category Common Types
  */
-export type IntentClass =
-  | "LOOKUP"
-  | "QUERY"
-  | "INGEST"
-  | "REVISE"
-  | "SYNTHESIZE"
-  | "*"; // Wildcard: accepts any intent class
+export type IntentClass = "LOOKUP" | "QUERY" | "INGEST" | "REVISE" | "*"; // Wildcard: accepts any intent class
 // TODO: Future intent classes may include: PRUNE, MERGE, PATH, CORRELATE, SUMMARIZE
 
 /**
@@ -637,7 +628,7 @@ export interface Resource {
    * - Explicitly specify `["*"]` (explicit wildcard)
    *
    * When `"*"` is included in the array, the resource accepts all intent classes
-   * (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `"*"` is included with other
+   * (QUERY, LOOKUP, INGEST, REVISE). If `"*"` is included with other
    * intent classes, the wildcard takes precedence.
    *
    * **Empty Array**: If set to an empty array `[]`, no intent classes are accepted.
@@ -1057,35 +1048,11 @@ export interface ReviseIntent {
 }
 
 /**
- * Intent for transforming unstructured data into structured form.
- *
- * @category Common Types
- */
-export interface SynthesizeIntent {
-  intentClass: "SYNTHESIZE";
-
-  /**
-   * Description of the desired structure or question to answer.
-   */
-  instruction: string;
-
-  /**
-   * Optional context data or references.
-   */
-  context?: unknown;
-}
-
-/**
  * The Intent structure used in VALIDATE and EXECUTE operations.
  *
  * @category Common Types
  */
-export type Intent =
-  | LookupIntent
-  | QueryIntent
-  | IngestIntent
-  | ReviseIntent
-  | SynthesizeIntent;
+export type Intent = LookupIntent | QueryIntent | IngestIntent | ReviseIntent;
 
 /**
  * Validation issue codes.

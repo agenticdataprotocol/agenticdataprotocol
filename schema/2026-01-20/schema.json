@@ -172,8 +172,7 @@
                         "INGEST",
                         "LOOKUP",
                         "QUERY",
-                        "REVISE",
-                        "SYNTHESIZE"
+                        "REVISE"
                     ],
                     "type": "string"
                 },
@@ -659,22 +658,18 @@
                 },
                 {
                     "$ref": "#/$defs/ReviseIntent"
-                },
-                {
-                    "$ref": "#/$defs/SynthesizeIntent"
                 }
             ],
             "description": "The Intent structure used in VALIDATE and EXECUTE operations."
         },
         "IntentClass": {
-            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
+            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
             "enum": [
                 "*",
                 "INGEST",
                 "LOOKUP",
                 "QUERY",
-                "REVISE",
-                "SYNTHESIZE"
+                "REVISE"
             ],
             "type": "string"
         },
@@ -1151,7 +1146,7 @@
                     "type": "string"
                 },
                 "intentClasses": {
-                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
                     "items": {
                         "$ref": "#/$defs/IntentClass"
                     },
@@ -1286,27 +1281,6 @@
             "required": [
                 "direction",
                 "fieldId"
-            ],
-            "type": "object"
-        },
-        "SynthesizeIntent": {
-            "description": "Intent for transforming unstructured data into structured form.",
-            "properties": {
-                "context": {
-                    "description": "Optional context data or references."
-                },
-                "instruction": {
-                    "description": "Description of the desired structure or question to answer.",
-                    "type": "string"
-                },
-                "intentClass": {
-                    "const": "SYNTHESIZE",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "instruction",
-                "intentClass"
             ],
             "type": "object"
         },
