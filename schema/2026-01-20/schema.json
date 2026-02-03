@@ -1167,8 +1167,8 @@
                     "description": "A detailed semantic description of the resource.",
                     "type": "string"
                 },
-                "summary": {
-                    "description": "A brief summary of the resource.",
+                "description": {
+                    "description": "A brief description of the resource. Unifies naming with Field.description.",
                     "type": "string"
                 },
                 "tags": {

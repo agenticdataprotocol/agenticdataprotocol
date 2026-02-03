@@ -651,9 +651,9 @@ export interface Resource {
   intentClasses?: IntentClass[];
 
   /**
-   * A brief summary of the resource.
+   * A brief description of the resource.
    */
-  summary?: string;
+  description?: string;
 
   /**
    * A detailed semantic description of the resource.
@@ -729,7 +729,7 @@ export interface FieldMetadata {
   /**
    * Sample values for this field (useful for whitelist validation).
    */
-  samples?: (string | number | boolean)[];
+  samples?: unknown[];
 
   /**
    * Additional custom metadata.

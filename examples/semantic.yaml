@@ -28,7 +28,7 @@ resources:
   - resourceId: "com.acme.finance:bank_failures"
     intentClasses: ["QUERY"]
     version: 1  # Resource version number (starts from 1; default 1 if omitted)
-    summary: "Bank failure records from FDIC"
+    description: "Bank failure records from FDIC"
     semanticDescription: "Historical records of bank failures including FDIC certificate numbers, closing dates, and failure summaries."
     tags:
       - "FINANCE"
@@ -75,7 +75,7 @@ resources:
   - resourceId: "com.acme.finance:audit_events"
     version: 1
     intentClasses: ["QUERY"]
-    summary: "Audit events (v1 - core fields only)"
+    description: "Audit events (v1 - core fields only)"
     backendId: "finance_sql"
     sources:
       - source: "audit_events"
@@ -94,7 +94,7 @@ resources:
   - resourceId: "com.acme.finance:audit_events"
     version: 2
     intentClasses: ["QUERY"]
-    summary: "Audit events (v2 - with actor and severity)"
+    description: "Audit events (v2 - with actor and severity)"
     backendId: "finance_sql"
     sources:
       - source: "audit_events"
@@ -119,7 +119,7 @@ resources:
   - resourceId: "com.acme.finance:universal_resource"
     intentClasses: ["*"]  # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
     version: 1
-    summary: "Universal resource supporting all intent classes"
+    description: "Universal resource supporting all intent classes"
     backendId: "finance_sql"
     sources:
       - source: "universal_table"
@@ -135,7 +135,7 @@ resources:
   - resourceId: "com.acme.finance:flexible_resource"
     # intentClasses omitted = defaults to ["*"] (wildcard)
     # version omitted = defaults to 1
-    summary: "Flexible resource with omitted intentClasses"
+    description: "Flexible resource with omitted intentClasses"
     backendId: "finance_sql"
     sources:
       - source: "flexible_table"
@@ -148,7 +148,7 @@ resources:
   - resourceId: "com.acme.finance:failure_vectors"
     intentClasses: ["QUERY"]
     version: 1
-    summary: "Vector embeddings of bank failure summaries"
+    description: "Vector embeddings of bank failure summaries"
     backendId: "report_vectors"
     sources:
       - source: "bank-summaries"
@@ -171,7 +171,7 @@ resources:
   - resourceId: "com.acme.finance:reports"
     intentClasses: ["QUERY"]
     version: 1
-    summary: "Financial reports stored in S3"
+    description: "Financial reports stored in S3"
     backendId: "raw_storage"
     sources:
       - source: "finance/reports/"

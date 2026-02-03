@@ -204,7 +204,7 @@ export type BackendConfig =
 export interface Backend {
   /**
    * Unique identifier for this backend.
-   * Referenced by resources in the semantic manifest via `backend_id`.
+   * Referenced by resources in the semantic manifest via `backendId`.
    */
   id: string;
 
@@ -278,7 +278,7 @@ export interface SourceDefinition {
    * Source identifier in the backend.
    *
    * Interpretation depends on the backend type:
-   * - RDBMS: table or view name (e.g., "v_failures_consolidated")
+   * - RDBMS: table or view name (e.g., "v_failures_consolidated"), the format can be {table_name} or {schema_name}.{table_name}
    * - Vector: collection or index name (e.g., "bank-summaries")
    * - S3: prefix pattern (e.g., "finance/reports/")
    * - NoSQL: collection or namespace name
@@ -322,7 +322,7 @@ export interface SourceDefinition {
  * - If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)
  * - If `intentClasses` contains `"*"`, acts as a wildcard accepting any intent class
  * - If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)
- * - If `summary` is omitted, will be auto-generated from source name
+ * - If `description` is omitted, will be auto-generated from source name
  * - If `semanticDescription` is omitted, will be auto-generated from backend metadata if available
  * - If `tags` is omitted, will be auto-generated from backend type and source
  *
@@ -333,7 +333,7 @@ export interface SourceDefinition {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   "intentClasses": ["QUERY"],
  *   "version": 1,
- *   "summary": "Bank failure records",
+ *   "description": "Bank failure records",
  *   "backendId": "finance_sql",
  *   "sources": [
  *     {
@@ -351,7 +351,7 @@ export interface SourceDefinition {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   "intentClasses": ["*"],
  *   "version": 1,
- *   "summary": "Bank failure records",
+ *   "description": "Bank failure records",
  *   "backendId": "finance_sql",
  *   "sources": [
  *     {
@@ -369,7 +369,7 @@ export interface SourceDefinition {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
  *   "version": 1,
- *   "summary": "Bank failure records",
+ *   "description": "Bank failure records",
  *   "backendId": "finance_sql",
  *   "sources": [
  *     {
@@ -392,7 +392,7 @@ export interface SourceDefinition {
  *   // resourceId will be auto-generated
  *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
  *   // version omitted = defaults to 1 (version numbers start from 1)
- *   // summary will be auto-generated
+ *   // description will be auto-generated
  * }
  * @example
  * // Bootstrap mode - discover all sources from backend
@@ -544,7 +544,7 @@ export interface SemanticManifest {
    * - Fields will be auto-discovered from backend schema introspection for each source
    * - `intentClasses` will default to `["*"]` (wildcard - accepts any intent class)
    * - `version` will default to `1` (version numbers start from 1)
-   * - All other resource properties (summary, etc.) will use defaults
+   * - All other resource properties (description, etc.) will use defaults
    *
    * If provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).
    * Bootstrap resources will have missing fields auto-generated during manifest processing.
@@ -573,7 +573,7 @@ export type PolicyCondition = string;
  * @example
  * {
  *   "type": "MANDATORY_FILTER",
- *   "field_id": "closing_date",
+ *   "fieldId": "closing_date",
  *   "op": "GT",
  *   "value": "2020-01-01"
  * }
