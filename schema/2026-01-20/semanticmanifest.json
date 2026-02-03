@@ -195,10 +195,10 @@
             "type": "object"
         }
     },
-    "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `resources` array entirely.\nThe system will automatically discover all resources from all backends defined in `physical.yaml`\nat runtime. Just set `defaultDomain` to enable auto-generation of resourceIds.",
+    "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Bootstrap Mode**: For the simplest setup, provide required `defaultDomain` and omit the\n`resources` array entirely. The system will automatically discover all resources from all\nbackends defined in `physical.yaml` at runtime and auto-generate resourceIds using `defaultDomain`.",
     "properties": {
         "defaultDomain": {
-            "description": "Default domain prefix for auto-generating resourceIds in bootstrap mode.\n\n**Bootstrap behavior**:\n- When `resources` is omitted, this domain is used to generate resourceIds for all\n  auto-discovered resources from all backends in `physical.yaml`.\n- When `resources` is provided but a resource doesn't specify `resourceId`, it will be\n  auto-generated using this domain.\n\nFormat should be reverse DNS (e.g., \"com.acme.finance\").\n\nIf not provided, the system will attempt to infer the domain from backend metadata\nor use a default domain.",
+            "description": "Default domain prefix for auto-generating resourceIds in bootstrap mode.\n**Required.** Cannot be omitted.\n\n**Bootstrap behavior**:\n- When `resources` is omitted, this domain is used to generate resourceIds for all\n  auto-discovered resources from all backends in `physical.yaml`.\n- When `resources` is provided but a resource doesn't specify `resourceId`, it will be\n  auto-generated using this domain.\n\nFormat should be reverse DNS (e.g., \"com.acme.finance\").",
             "type": "string"
         },
         "resources": {
@@ -209,10 +209,14 @@
             "type": "array"
         },
         "version": {
-            "description": "Version of the manifest schema.",
+            "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
             "type": "string"
         }
     },
+    "required": [
+        "defaultDomain",
+        "version"
+    ],
     "type": "object"
 }
 

@@ -159,10 +159,13 @@
             "type": "array"
         },
         "version": {
-            "description": "Version of the manifest schema.",
+            "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
             "type": "string"
         }
     },
+    "required": [
+        "version"
+    ],
     "type": "object"
 }
 

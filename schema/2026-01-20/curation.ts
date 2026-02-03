@@ -252,8 +252,9 @@ export interface Backend {
 export interface PhysicalManifest {
   /**
    * Version of the manifest schema.
+   * **Required.** Used to identify which spec version this manifest follows.
    */
-  version?: string;
+  version: string;
 
   /**
    * List of backend definitions.
@@ -458,9 +459,9 @@ export interface CuratedResource extends Resource {
 /**
  * Root structure for the semantic manifest (semantic.yaml).
  *
- * **Bootstrap Mode**: For the simplest setup, you can omit the `resources` array entirely.
- * The system will automatically discover all resources from all backends defined in `physical.yaml`
- * at runtime. Just set `defaultDomain` to enable auto-generation of resourceIds.
+ * **Bootstrap Mode**: For the simplest setup, provide required `defaultDomain` and omit the
+ * `resources` array entirely. The system will automatically discover all resources from all
+ * backends defined in `physical.yaml` at runtime and auto-generate resourceIds using `defaultDomain`.
  *
  * @category Curation Semantic Manifest
  * @example
@@ -512,11 +513,13 @@ export interface CuratedResource extends Resource {
 export interface SemanticManifest {
   /**
    * Version of the manifest schema.
+   * **Required.** Used to identify which spec version this manifest follows.
    */
-  version?: string;
+  version: string;
 
   /**
    * Default domain prefix for auto-generating resourceIds in bootstrap mode.
+   * **Required.** Cannot be omitted.
    *
    * **Bootstrap behavior**:
    * - When `resources` is omitted, this domain is used to generate resourceIds for all
@@ -526,12 +529,9 @@ export interface SemanticManifest {
    *
    * Format should be reverse DNS (e.g., "com.acme.finance").
    *
-   * If not provided, the system will attempt to infer the domain from backend metadata
-   * or use a default domain.
-   *
    * @example "com.acme.finance"
    */
-  defaultDomain?: string;
+  defaultDomain: string;
 
   /**
    * List of resource definitions.
@@ -717,8 +717,9 @@ export interface ResourcePolicy {
 export interface PolicyManifest {
   /**
    * Version of the manifest schema.
+   * **Required.** Used to identify which spec version this manifest follows.
    */
-  version?: string;
+  version: string;
 
   /**
    * List of resource policies.

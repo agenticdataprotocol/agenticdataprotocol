@@ -1,6 +1,7 @@
 # Semantic Manifest - Bootstrap Mode Example
 # Simplest setup: Just specify the domain, everything else is auto-discovered
 
+version: "1.0.0"
 defaultDomain: "com.acme.finance"
 
 # No resources array needed!
