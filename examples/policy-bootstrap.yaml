@@ -1,0 +1,15 @@
+# Policy Manifest - Bootstrap Mode Example
+# Simplest setup: No policy enforcements
+
+version: "1.0.0"
+
+# No policies array needed!
+# When omitted or empty, no special enforcements are applied:
+# - No mandatory filters (no required predicates)
+# - No operational constraints (no limits, no default sorting)
+# - All resources are accessible without restrictions
+#
+# This is ideal for:
+# - Development and testing
+# - Quick prototyping
+# - Internal tools with trusted access

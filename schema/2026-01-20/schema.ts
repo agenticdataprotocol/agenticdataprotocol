@@ -197,7 +197,8 @@ export type IntentClass =
   | "QUERY"
   | "INGEST"
   | "REVISE"
-  | "SYNTHESIZE";
+  | "SYNTHESIZE"
+  | "*"; // Wildcard: accepts any intent class
 // TODO: Future intent classes may include: PRUNE, MERGE, PATH, CORRELATE, SUMMARIZE
 
 /**
@@ -241,6 +242,22 @@ export type IssueSeverity = "BLOCKING" | "WARNING";
  * @category Common Types
  */
 export type ConsistencyLevel = "STRONG" | "EVENTUAL";
+
+/**
+ * Supported field data types.
+ *
+ * @category Common Types
+ */
+export type FieldType =
+  | "STRING"
+  | "INTEGER"
+  | "FLOAT"
+  | "BOOLEAN"
+  | "DATE"
+  | "TIMESTAMP"
+  | "VECTOR"
+  | "BLOB"
+  | "JSON";
 
 /**
  * Structured value for SIMILAR operator (vector similarity search).
@@ -586,30 +603,57 @@ export interface DiscoverRequest extends JSONRPCRequest {
 }
 
 /**
- * A single resource returned in the DISCOVER response.
+ * Base resource information shared between protocol responses and curation manifests.
  *
- * @category `adp.discover`
+ * @category Common Types
  */
 export interface Resource {
   /**
    * The unique domain-qualified identifier for this resource.
    */
-  resourceId: ResourceId;
+  resourceId?: ResourceId;
 
   /**
-   * The version of this resource's schema.
+   * The version number of this resource's schema.
+   *
+   * **Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).
+   * Version numbers start from 1. If omitted, the default version number is 1.
+   * When describing a resource, the client may request a specific version; if not
+   * specified, the server returns the latest version.
+   *
+   * @default 1
+   * @example 1
+   * @example 2
    */
-  version: string;
+  version?: number;
 
   /**
-   * The primary intent class this resource supports.
+   * The intent classes this resource supports.
+   *
+   * **Default**: If omitted, defaults to `["*"]` (wildcard - accepts any intent class).
+   *
+   * **Wildcard Support**: To accept any intent class, you can:
+   * - Omit this field (defaults to `["*"]`)
+   * - Explicitly specify `["*"]` (explicit wildcard)
+   *
+   * When `"*"` is included in the array, the resource accepts all intent classes
+   * (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `"*"` is included with other
+   * intent classes, the wildcard takes precedence.
+   *
+   * **Empty Array**: If set to an empty array `[]`, no intent classes are accepted.
+   * The resource will reject all requests regardless of intent class. This effectively
+   * disables the resource.
+   *
+   * @example ["QUERY", "LOOKUP"]
+   * @example ["*"]
+   * @example [] // No intent classes accepted (resource disabled)
    */
-  intentClass: IntentClass;
+  intentClasses?: IntentClass[];
 
   /**
-   * A brief summary of the resource.
+   * A brief description of the resource.
    */
-  summary: string;
+  description?: string;
 
   /**
    * A detailed semantic description of the resource.
@@ -665,6 +709,32 @@ export interface FieldMetadata {
    * A hint for the Agent about how to use this field.
    */
   hint?: string;
+
+  /**
+   * For VECTOR fields, specifies vector dimensions and distance function.
+   */
+  vector?: {
+    /**
+     * Number of dimensions in the vector.
+     */
+    dimensions: number;
+
+    /**
+     * Distance function to use for similarity search.
+     * @example "COSINE", "L2", "INNER_PRODUCT"
+     */
+    distanceFunction?: string;
+  };
+
+  /**
+   * Sample values for this field (useful for whitelist validation).
+   */
+  samples?: unknown[];
+
+  /**
+   * Additional custom metadata.
+   */
+  [key: string]: unknown;
 }
 
 /**
@@ -682,7 +752,7 @@ export interface Field {
    * The data type of this field.
    * @example "STRING", "INTEGER", "BOOLEAN", "DATE"
    */
-  type: string;
+  type: FieldType;
 
   /**
    * Human-readable description of the field.
@@ -699,6 +769,12 @@ export interface Field {
    * @default false
    */
   isMasked?: boolean;
+
+  /**
+   * If true, this field supports similarity search (hint for SIMILAR operator).
+   * @default false
+   */
+  isSearchable?: boolean;
 
   /**
    * Additional metadata about the field.
@@ -818,6 +894,18 @@ export interface DescribeRequestParams extends PaginatedRequestParams {
    * The intent class the Agent plans to use.
    */
   intentClass: IntentClass;
+
+  /**
+   * The version of the resource to describe.
+   *
+   * **Multi-version support**: If omitted, the server returns the latest version
+   * of the resource. If specified, the server returns the usage contract for
+   * that specific version. Version numbers start from 1.
+   *
+   * @example 1
+   * @example 2
+   */
+  version?: number;
 }
 
 /**
@@ -842,9 +930,11 @@ export interface DescribeResult extends PaginatedResult {
   resourceId: ResourceId;
 
   /**
-   * The resource's schema version.
+   * The version of the resource schema that was returned.
+   * This is the specific version that was requested (if specified in the request)
+   * or the latest version (if version was omitted in the request).
    */
-  version: string;
+  version: number;
 
   /**
    * The intent class this contract applies to.

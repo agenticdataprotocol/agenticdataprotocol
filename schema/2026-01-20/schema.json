@@ -109,6 +109,10 @@
                 "resourceId": {
                     "description": "The unique identifier of the resource to describe.",
                     "type": "string"
+                },
+                "version": {
+                    "description": "The version of the resource to describe.\n\n**Multi-version support**: If omitted, the server returns the latest version\nof the resource. If specified, the server returns the usage contract for\nthat specific version. Version numbers start from 1.",
+                    "type": "integer"
                 }
             },
             "required": [
@@ -142,8 +146,8 @@
                     "description": "The usage contract for this resource and intent."
                 },
                 "version": {
-                    "description": "The resource's schema version.",
-                    "type": "string"
+                    "description": "The version of the resource schema that was returned.\nThis is the specific version that was requested (if specified in the request)\nor the latest version (if version was omitted in the request).",
+                    "type": "integer"
                 }
             },
             "required": [
@@ -164,6 +168,7 @@
                 "intentClass": {
                     "description": "Filter resources by intent class.",
                     "enum": [
+                        "*",
                         "INGEST",
                         "LOOKUP",
                         "QUERY",
@@ -391,6 +396,11 @@
                     "description": "If true, this field is masked/redacted by policy.",
                     "type": "boolean"
                 },
+                "isSearchable": {
+                    "default": false,
+                    "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
+                    "type": "boolean"
+                },
                 "metadata": {
                     "$ref": "#/$defs/FieldMetadata",
                     "description": "Additional metadata about the field."
@@ -401,8 +411,8 @@
                     "type": "array"
                 },
                 "type": {
-                    "description": "The data type of this field.",
-                    "type": "string"
+                    "$ref": "#/$defs/FieldType",
+                    "description": "The data type of this field."
                 }
             },
             "required": [
@@ -412,6 +422,7 @@
             "type": "object"
         },
         "FieldMetadata": {
+            "additionalProperties": {},
             "description": "Metadata about a field's characteristics.",
             "properties": {
                 "cardinality": {
@@ -429,12 +440,49 @@
                     "description": "A hint for the Agent about how to use this field.",
                     "type": "string"
                 },
+                "samples": {
+                    "description": "Sample values for this field (useful for whitelist validation).",
+                    "items": {},
+                    "type": "array"
+                },
+                "vector": {
+                    "description": "For VECTOR fields, specifies vector dimensions and distance function.",
+                    "properties": {
+                        "dimensions": {
+                            "description": "Number of dimensions in the vector.",
+                            "type": "integer"
+                        },
+                        "distanceFunction": {
+                            "description": "Distance function to use for similarity search.",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "dimensions"
+                    ],
+                    "type": "object"
+                },
                 "whitelistOnly": {
                     "description": "If true, only values from provided samples/examples are valid.",
                     "type": "boolean"
                 }
             },
             "type": "object"
+        },
+        "FieldType": {
+            "description": "Supported field data types.",
+            "enum": [
+                "BLOB",
+                "BOOLEAN",
+                "DATE",
+                "FLOAT",
+                "INTEGER",
+                "JSON",
+                "STRING",
+                "TIMESTAMP",
+                "VECTOR"
+            ],
+            "type": "string"
         },
         "IdentityPredicate": {
             "description": "An identity predicate used for unique key lookups.\nOnly allows the EQ operator to ensure exact matching.",
@@ -621,6 +669,7 @@
         "IntentClass": {
             "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)\n\nCOGNITIVE operations:\n- `SYNTHESIZE` - Transform/Extract structure from unstructured data",
             "enum": [
+                "*",
                 "INGEST",
                 "LOOKUP",
                 "QUERY",
@@ -1095,11 +1144,18 @@
             "type": "object"
         },
         "Resource": {
-            "description": "A single resource returned in the DISCOVER response.",
+            "description": "Base resource information shared between protocol responses and curation manifests.",
             "properties": {
-                "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The primary intent class this resource supports."
+                "description": {
+                    "description": "A brief description of the resource.",
+                    "type": "string"
+                },
+                "intentClasses": {
+                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "items": {
+                        "$ref": "#/$defs/IntentClass"
+                    },
+                    "type": "array"
                 },
                 "resourceId": {
                     "description": "The unique domain-qualified identifier for this resource.",
@@ -1107,10 +1163,6 @@
                 },
                 "semanticDescription": {
                     "description": "A detailed semantic description of the resource.",
-                    "type": "string"
-                },
-                "summary": {
-                    "description": "A brief summary of the resource.",
                     "type": "string"
                 },
                 "tags": {
@@ -1121,16 +1173,11 @@
                     "type": "array"
                 },
                 "version": {
-                    "description": "The version of this resource's schema.",
-                    "type": "string"
+                    "default": 1,
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "type": "integer"
                 }
             },
-            "required": [
-                "intentClass",
-                "resourceId",
-                "summary",
-                "version"
-            ],
             "type": "object"
         },
         "ResourceId": {

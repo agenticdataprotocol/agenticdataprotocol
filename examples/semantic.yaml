@@ -1,0 +1,220 @@
+# Semantic Manifest Example
+# Maps physical data sources to ADP resources and defines the "Agent's View" of fields
+#
+# IMPORTANT: While `sources` is defined as an array, currently only a single source
+# element is supported per resource. The array structure is preserved for future
+# support of multiple sources. When multiple sources are needed, create separate
+# resources with different resourceIds.
+
+# ============================================================================
+# Bootstrap Mode - Simplest Setup
+# ============================================================================
+# Uncomment the following for full auto-discovery:
+# defaultDomain: "com.acme.finance"
+# # No resources array needed - all resources will be auto-discovered from physical.yaml
+# # For each backend, all sources (tables, collections, etc.) will be discovered
+# # A separate resource will be created for each source (one source per resource)
+# # ResourceIds will be auto-generated as "{defaultDomain}:{source}"
+# # Fields will be auto-discovered from backend schema
+
+# ============================================================================
+# Full Manual Definition
+# ============================================================================
+version: "1.0.0"
+defaultDomain: "com.acme.finance"
+
+resources:
+  # RDBMS Resource - Full definition with single source
+  - resourceId: "com.acme.finance:bank_failures"
+    intentClasses: ["QUERY"]
+    version: 1  # Resource version number (starts from 1; default 1 if omitted)
+    description: "Bank failure records from FDIC"
+    semanticDescription: "Historical records of bank failures including FDIC certificate numbers, closing dates, and failure summaries."
+    tags:
+      - "FINANCE"
+      - "REGULATORY"
+      - "HISTORICAL"
+    backendId: "finance_sql"
+    sources:
+      - source: "v_failures_consolidated"
+        fields:
+          - fieldId: "bank_id"
+            type: "STRING"
+            description: "FDIC Certificate Number"
+            isSearchable: false
+          - fieldId: "bank_name"
+            type: "STRING"
+            description: "Name of the failed bank"
+            isSearchable: true
+          - fieldId: "failure_summary"
+            type: "STRING"
+            description: "Long-form narrative of the failure event."
+            isSearchable: true
+          - fieldId: "closing_date"
+            type: "DATE"
+            description: "The date the institution was closed."
+            isSearchable: false
+          - fieldId: "assets"
+            type: "FLOAT"
+            description: "Total assets at time of failure"
+            isSearchable: false
+
+  # Note: Currently only one source per resource is supported.
+  # To combine multiple tables, create separate resources:
+  # - resourceId: "com.acme.finance:bank_failures" with source: "bank_failures"
+  # - resourceId: "com.acme.finance:bank_mergers" with source: "bank_mergers"
+
+  # ============================================================================
+  # Multi-Version Resource Example
+  # ============================================================================
+  # Same resourceId with different version numbers. adp.describe without version
+  # returns the latest version; adp.describe with version: 1 or version: 2 returns
+  # that version's usage contract.
+
+  # Version 1 - original schema (fewer fields)
+  - resourceId: "com.acme.finance:audit_events"
+    version: 1
+    intentClasses: ["QUERY"]
+    description: "Audit events (v1 - core fields only)"
+    backendId: "finance_sql"
+    sources:
+      - source: "audit_events"
+        fields:
+          - fieldId: "event_id"
+            type: "STRING"
+            description: "Unique event identifier"
+          - fieldId: "event_type"
+            type: "STRING"
+            description: "Type of audit event"
+          - fieldId: "created_at"
+            type: "TIMESTAMP"
+            description: "When the event occurred"
+
+  # Version 2 - extended schema (additional fields)
+  - resourceId: "com.acme.finance:audit_events"
+    version: 2
+    intentClasses: ["QUERY"]
+    description: "Audit events (v2 - with actor and severity)"
+    backendId: "finance_sql"
+    sources:
+      - source: "audit_events"
+        fields:
+          - fieldId: "event_id"
+            type: "STRING"
+            description: "Unique event identifier"
+          - fieldId: "event_type"
+            type: "STRING"
+            description: "Type of audit event"
+          - fieldId: "created_at"
+            type: "TIMESTAMP"
+            description: "When the event occurred"
+          - fieldId: "actor_id"
+            type: "STRING"
+            description: "ID of the user or system that performed the action (v2)"
+          - fieldId: "severity"
+            type: "STRING"
+            description: "Event severity: LOW, MEDIUM, HIGH (v2)"
+
+  # Wildcard Intent Class Example - explicit wildcard using "*"
+  - resourceId: "com.acme.finance:universal_resource"
+    intentClasses: ["*"]  # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+    version: 1
+    description: "Universal resource supporting all intent classes"
+    backendId: "finance_sql"
+    sources:
+      - source: "universal_table"
+        fields:
+          - fieldId: "id"
+            type: "STRING"
+            description: "Unique identifier"
+          - fieldId: "data"
+            type: "JSON"
+            description: "Flexible data payload"
+
+  # Wildcard Intent Class Example - omit intentClasses (same as ["*"])
+  - resourceId: "com.acme.finance:flexible_resource"
+    # intentClasses omitted = defaults to ["*"] (wildcard)
+    # version omitted = defaults to 1
+    description: "Flexible resource with omitted intentClasses"
+    backendId: "finance_sql"
+    sources:
+      - source: "flexible_table"
+        fields:
+          - fieldId: "id"
+            type: "STRING"
+            description: "Unique identifier"
+
+  # Vector Resource - Embeddings
+  - resourceId: "com.acme.finance:failure_vectors"
+    intentClasses: ["QUERY"]
+    version: 1
+    description: "Vector embeddings of bank failure summaries"
+    backendId: "report_vectors"
+    sources:
+      - source: "bank-summaries"
+        fields:
+          - fieldId: "summary_embedding"
+            type: "VECTOR"
+            description: "Vector embedding of the failure summary"
+            metadata:
+              vector:
+                dimensions: 1536
+                distanceFunction: "COSINE"
+          - fieldId: "bank_id"
+            type: "STRING"
+            description: "Reference to the bank record"
+          - fieldId: "metadata"
+            type: "JSON"
+            description: "Additional metadata about the embedding"
+
+  # S3 Resource - Object Storage
+  - resourceId: "com.acme.finance:reports"
+    intentClasses: ["QUERY"]
+    version: 1
+    description: "Financial reports stored in S3"
+    backendId: "raw_storage"
+    sources:
+      - source: "finance/reports/"
+        fields:
+          - fieldId: "report_id"
+            type: "STRING"
+            description: "Unique identifier for the report"
+          - fieldId: "report_date"
+            type: "DATE"
+            description: "Date of the report"
+          - fieldId: "report_type"
+            type: "STRING"
+            description: "Type of financial report"
+          - fieldId: "file_path"
+            type: "STRING"
+            description: "S3 path to the report file"
+          - fieldId: "file_size"
+            type: "INTEGER"
+            description: "Size of the file in bytes"
+
+# ============================================================================
+# Partial Bootstrap Mode Example
+# ============================================================================
+# You can also mix manual and bootstrap definitions:
+# defaultDomain: "com.acme.finance"
+# resources:
+#   # Minimal bootstrap definition - fields will be auto-discovered
+#   - backendId: "finance_sql"
+#     sources:
+#       - source: "v_failures_consolidated"
+#         # fields will be auto-discovered from table schema
+#     # resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
+#     # intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+#     # version omitted = defaults to 1 (version numbers start from 1)
+#
+#   # Full manual definition with single source (current limitation)
+#   - resourceId: "com.acme.finance:custom_view"
+#     backendId: "finance_sql"
+#     sources:
+#       - source: "custom_analytics_view"
+#         fields:
+#           - fieldId: "custom_field"
+#             type: "STRING"
+#             description: "Custom field definition"
+#   # Note: Currently only one source per resource is supported.
+#   # For multiple sources, create separate resources.

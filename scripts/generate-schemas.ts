@@ -35,6 +35,66 @@ function applyJsonSchema202012Transformations(schemaPath: string): void {
 }
 
 /**
+ * Generate JSON schema for a specific type from a TypeScript file
+ */
+async function generateTypeSchema(
+  tsFile: string,
+  typeName: string,
+  outputPath: string,
+  check: boolean = false,
+): Promise<boolean> {
+  if (check) {
+    // Read existing schema
+    const existingSchema = readFileSync(outputPath, "utf-8");
+
+    // Generate schema to stdout and capture it
+    try {
+      const { stdout: generated } = await execAsync(
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}"`,
+      );
+
+      let expectedSchema = generated;
+
+      // Apply transformations
+      expectedSchema = expectedSchema.replace(
+        /http:\/\/json-schema\.org\/draft-07\/schema#/g,
+        "https://json-schema.org/draft/2020-12/schema",
+      );
+      expectedSchema = expectedSchema.replace(/"definitions":/g, '"$defs":');
+      expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
+
+      // Compare
+      if (existingSchema.trim() !== expectedSchema.trim()) {
+        console.error(`  ✗ Schema for ${typeName} is out of date!`);
+        return false;
+      }
+
+      console.log(`  ✓ Schema for ${typeName} is up to date`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to check schema for ${typeName}`);
+      throw error;
+    }
+  } else {
+    // Run typescript-json-schema
+    try {
+      await execAsync(
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}" -o "${outputPath}"`,
+      );
+    } catch (error) {
+      console.error(`Failed to generate schema for ${typeName}`);
+      throw error;
+    }
+
+    // Apply transformations
+    applyJsonSchema202012Transformations(outputPath);
+
+    console.log(`  ✓ Generated schema for ${typeName}`);
+    return true;
+  }
+}
+
+/**
  * Generate JSON schema for a specific version
  */
 async function generateSchema(
@@ -97,17 +157,49 @@ async function generateSchema(
 }
 
 /**
+ * Generate JSON schemas for curation manifests
+ */
+async function generateCurationSchemas(
+  version: string,
+  check: boolean = false,
+): Promise<boolean> {
+  const schemaDir = join("schema", version);
+  const curationTs = join(schemaDir, "curation.ts");
+
+  const manifestTypes = [
+    "PhysicalManifest",
+    "SemanticManifest",
+    "PolicyManifest",
+  ];
+
+  const results = await Promise.all(
+    manifestTypes.map(async (typeName) => {
+      const outputPath = join(schemaDir, `${typeName.toLowerCase()}.json`);
+      return generateTypeSchema(curationTs, typeName, outputPath, check);
+    }),
+  );
+
+  return results.every((valid) => valid);
+}
+
+/**
  * Main function
  */
 async function main(): Promise<void> {
   if (CHECK_MODE) {
     console.log("Checking JSON schemas...\n");
 
-    const results = await Promise.all(
+    const schemaResults = await Promise.all(
       SCHEMA_VERSIONS.map((version) => generateSchema(version, true)),
     );
 
-    const allValid = results.every((valid) => valid);
+    const curationResults = await Promise.all(
+      SCHEMA_VERSIONS.map((version) => generateCurationSchemas(version, true)),
+    );
+
+    const allValid =
+      schemaResults.every((valid) => valid) &&
+      curationResults.every((valid) => valid);
 
     console.log();
     if (!allValid) {
@@ -123,6 +215,12 @@ async function main(): Promise<void> {
 
     await Promise.all(
       SCHEMA_VERSIONS.map((version) => generateSchema(version, false)),
+    );
+
+    console.log("\nGenerating curation manifest schemas...\n");
+
+    await Promise.all(
+      SCHEMA_VERSIONS.map((version) => generateCurationSchemas(version, false)),
     );
 
     console.log("\nSchema generation complete!");

@@ -1,0 +1,86 @@
+# Policy Manifest Example
+# Defines governance rules and constraints for resource access
+#
+# NOTE: Currently, resources support only a single source. The `source` field
+# in policy rules (MandatoryFilterRule and defaultOrderBy) is optional and
+# can be omitted for single-source resources. The field is reserved for
+# future support of multiple sources per resource.
+
+# ============================================================================
+# Bootstrap Mode - No Enforcements
+# ============================================================================
+# Uncomment the following for bootstrap mode (no restrictions):
+# version: "1.0.0"
+# # No policies array needed - no special enforcements will be applied
+# # All resources are accessible without restrictions
+
+# ============================================================================
+# Full Manual Definition with Policy Rules
+# ============================================================================
+version: "1.0.0"
+
+policies:
+  # Policy for single-source resource - source field can be omitted
+  - resourceId: "com.acme.finance:bank_failures"
+    rules:
+      # Mandatory filter: enforce data freshness
+      # source omitted - OK because resource has only one source (current limitation)
+      - type: "MANDATORY_FILTER"
+        fieldId: "closing_date"
+        op: "GT"
+        value: "2020-01-01"
+        condition: "agent_tier == 'PRODUCTION'"
+
+      # Operational constraint: limit results and default sorting
+      # source omitted in defaultOrderBy - OK because resource has only one source
+      - type: "OPERATIONAL"
+        enforceLimit: 100
+        defaultOrderBy:
+          fieldId: "closing_date"
+          direction: "DESC"
+        condition: "agent_tier == 'PRODUCTION'"
+
+  # Policy for vector search resource
+  - resourceId: "com.acme.finance:failure_vectors"
+    rules:
+      - type: "OPERATIONAL"
+        enforceLimit: 50
+        defaultOrderBy:
+          fieldId: "bank_id"
+          direction: "ASC"
+
+  # Policy for reports resource
+  - resourceId: "com.acme.finance:reports"
+    rules:
+      # Mandatory filter: only show reports from last 2 years
+      - type: "MANDATORY_FILTER"
+        fieldId: "report_date"
+        op: "GTE"
+        value: "2024-01-01"
+
+      # Operational constraint: limit to 200 results
+      - type: "OPERATIONAL"
+        enforceLimit: 200
+
+  # Policy with conditional rules
+  - resourceId: "com.acme.finance:*"
+    rules:
+      # Apply limit to all finance resources for basic tier
+      - type: "OPERATIONAL"
+        enforceLimit: 50
+        condition: "agent_tier == 'BASIC'"
+
+      # More permissive for production tier
+      - type: "OPERATIONAL"
+        enforceLimit: 1000
+        condition: "agent_tier == 'PRODUCTION'"
+
+# ============================================================================
+# Minimal Policy Example
+# ============================================================================
+# You can also define minimal policies:
+# version: "1.0.0"
+# policies:
+#   - resourceId: "com.acme.finance:bank_failures"
+#     # Empty rules array = no enforcements for this resource
+#     rules: []
