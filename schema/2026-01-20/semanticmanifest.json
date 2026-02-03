@@ -8,6 +8,10 @@
                     "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
                     "type": "string"
                 },
+                "description": {
+                    "description": "A brief description of the resource.",
+                    "type": "string"
+                },
                 "intentClasses": {
                     "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
                     "items": {
@@ -29,10 +33,6 @@
                         "$ref": "#/$defs/SourceDefinition"
                     },
                     "type": "array"
-                },
-                "description": {
-                    "description": "A brief description of the resource. Unifies naming with Field.description.",
-                    "type": "string"
                 },
                 "tags": {
                     "description": "Tags for categorization and filtering.",
@@ -114,13 +114,7 @@
                 },
                 "samples": {
                     "description": "Sample values for this field (useful for whitelist validation).",
-                    "items": {
-                        "type": [
-                            "string",
-                            "integer",
-                            "boolean"
-                        ]
-                    },
+                    "items": {},
                     "type": "array"
                 },
                 "vector": {
@@ -185,7 +179,7 @@
                     "type": "array"
                 },
                 "source": {
-                    "description": "Source identifier in the backend.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\")\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
+                    "description": "Source identifier in the backend.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\"), the format can be {table_name} or {schema_name}.{table_name}\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
                     "type": "string"
                 }
             },

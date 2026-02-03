@@ -13,7 +13,7 @@
                     "description": "Credential reference for authentication."
                 },
                 "id": {
-                    "description": "Unique identifier for this backend.\nReferenced by resources in the semantic manifest via `backend_id`.",
+                    "description": "Unique identifier for this backend.\nReferenced by resources in the semantic manifest via `backendId`.",
                     "type": "string"
                 },
                 "metadata": {
