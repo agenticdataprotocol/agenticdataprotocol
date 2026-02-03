@@ -318,7 +318,7 @@ export interface SourceDefinition {
  * - If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)
  * - If `sources` is omitted, all sources from the backend will be discovered and a resource created for each
  * - If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema
- * - If `intentClasses` is omitted, defaults to `["*"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+ * - If `intentClasses` is omitted, defaults to `["*"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)
  * - If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)
  * - If `intentClasses` contains `"*"`, acts as a wildcard accepting any intent class
  * - If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)
@@ -437,7 +437,7 @@ export interface CuratedResource extends Resource {
  * Intent class support for CuratedResource.
  *
  * **Default Behavior**: If `intentClasses` is omitted, it defaults to `["*"]` (wildcard),
- * which accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE).
+ * which accepts any intent class (QUERY, LOOKUP, INGEST, REVISE).
  *
  * **Wildcard Intent Class**: The resource can accept any intent class by:
  * 1. Omitting `intentClasses` (defaults to `["*"]`)

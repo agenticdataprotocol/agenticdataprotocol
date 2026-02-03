@@ -117,7 +117,7 @@ resources:
 
   # Wildcard Intent Class Example - explicit wildcard using "*"
   - resourceId: "com.acme.finance:universal_resource"
-    intentClasses: ["*"]  # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+    intentClasses: ["*"]  # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE)
     version: 1
     description: "Universal resource supporting all intent classes"
     backendId: "finance_sql"
@@ -204,7 +204,7 @@ resources:
 #       - source: "v_failures_consolidated"
 #         # fields will be auto-discovered from table schema
 #     # resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
-#     # intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE, SYNTHESIZE)
+#     # intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)
 #     # version omitted = defaults to 1 (version numbers start from 1)
 #
 #   # Full manual definition with single source (current limitation)
