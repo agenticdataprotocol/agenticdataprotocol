@@ -289,16 +289,12 @@ export interface SourceDefinition {
   /**
    * Field definitions for this source.
    *
-   * the backend schema by introspecting the source structure:
-   * - For RDBMS: columns from table/view schema
-   * - For Vector: metadata fields from collection schema
-   * - For S3: inferred from object structure or metadata
-   * - For NoSQL: fields from document schema
-   * - For Graph: properties from node/edge schema
+   * When provided, these define the ADP-visible field schema for this source.
    *
-   * Field types will be mapped from backend types to ADP FieldType.
-   * Field IDs will be derived from backend column/field names (sanitized).
-   * Descriptions will be extracted from backend comments/metadata if available.
+   * For some backends, there may be no stable or meaningful field-level schema
+   * (for example, opaque blob stores or key/value stores with arbitrary values).
+   * In those cases, this property can be safely omitted and the resource will
+   * be treated as exposing an opaque or implementation-defined payload.
    */
   fields?: Field[];
 }

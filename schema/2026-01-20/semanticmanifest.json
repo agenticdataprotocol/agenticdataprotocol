@@ -42,8 +42,7 @@
                     "type": "array"
                 },
                 "version": {
-                    "default": 1,
-                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
                     "type": "integer"
                 }
             },
@@ -170,7 +169,7 @@
             "description": "Definition of a source within a resource.\nEach source represents a specific data source (table, collection, prefix, etc.)\nwithin a backend, with its own field definitions.",
             "properties": {
                 "fields": {
-                    "description": "Field definitions for this source.\n\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
+                    "description": "Field definitions for this source.\n\nWhen provided, these define the ADP-visible field schema for this source.\n\nFor some backends, there may be no stable or meaningful field-level schema\n(for example, opaque blob stores or key/value stores with arbitrary values).\nIn those cases, this property can be safely omitted and the resource will\nbe treated as exposing an opaque or implementation-defined payload.",
                     "items": {
                         "$ref": "#/$defs/Field"
                     },

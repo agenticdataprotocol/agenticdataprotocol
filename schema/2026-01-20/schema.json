@@ -1178,8 +1178,7 @@
                     "type": "array"
                 },
                 "version": {
-                    "default": 1,
-                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
                     "type": "integer"
                 }
             },

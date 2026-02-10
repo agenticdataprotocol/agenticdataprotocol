@@ -608,11 +608,10 @@ export interface Resource {
    * The version number of this resource's schema.
    *
    * **Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).
-   * Version numbers start from 1. If omitted, the default version number is 1.
-   * When describing a resource, the client may request a specific version; if not
-   * specified, the server returns the latest version.
+   * Version numbers start from 1. When describing a resource, the client may
+   * request a specific version; if not specified, the server returns the latest
+   * version.
    *
-   * @default 1
    * @example 1
    * @example 2
    */
