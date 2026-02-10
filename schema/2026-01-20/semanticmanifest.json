@@ -1,191 +1,210 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$defs": {
-    "CuratedResource": {
-      "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,\nresources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).",
-      "properties": {
-        "backendId": {
-          "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
-          "type": "string"
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+        "CuratedResource": {
+            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,\nresources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).",
+            "properties": {
+                "backendId": {
+                    "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "A brief description of the resource.",
+                    "type": "string"
+                },
+                "intentClasses": {
+                    "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "items": {
+                        "$ref": "#/$defs/IntentClass"
+                    },
+                    "type": "array"
+                },
+                "resourceId": {
+                    "description": "The unique domain-qualified identifier for this resource.",
+                    "type": "string"
+                },
+                "semanticDescription": {
+                    "description": "A detailed semantic description of the resource.",
+                    "type": "string"
+                },
+                "sources": {
+                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
+                    "items": {
+                        "$ref": "#/$defs/SourceDefinition"
+                    },
+                    "type": "array"
+                },
+                "tags": {
+                    "description": "Tags for categorization and filtering.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "version": {
+                    "default": 1,
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "backendId",
+                "intentClasses",
+                "resourceId",
+                "sources",
+                "version"
+            ],
+            "type": "object"
         },
-        "description": {
-          "description": "A brief description of the resource.",
-          "type": "string"
+        "Field": {
+            "description": "Definition of a single field in a resource.",
+            "properties": {
+                "description": {
+                    "description": "Human-readable description of the field.",
+                    "type": "string"
+                },
+                "fieldId": {
+                    "description": "The field identifier.",
+                    "type": "string"
+                },
+                "isMasked": {
+                    "default": false,
+                    "description": "If true, this field is masked/redacted by policy.",
+                    "type": "boolean"
+                },
+                "isSearchable": {
+                    "default": false,
+                    "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
+                    "type": "boolean"
+                },
+                "metadata": {
+                    "$ref": "#/$defs/FieldMetadata",
+                    "description": "Additional metadata about the field."
+                },
+                "samples": {
+                    "description": "Sample values for this field.",
+                    "items": {},
+                    "type": "array"
+                },
+                "type": {
+                    "description": "The data type of this field.",
+                    "enum": [
+                        "BLOB",
+                        "BOOLEAN",
+                        "DATE",
+                        "FLOAT",
+                        "INTEGER",
+                        "JSON",
+                        "STRING",
+                        "TIMESTAMP",
+                        "VECTOR"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "fieldId"
+            ],
+            "type": "object"
         },
-        "intentClasses": {
-          "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
-          "items": {
-            "$ref": "#/$defs/IntentClass"
-          },
-          "type": "array"
+        "FieldMetadata": {
+            "additionalProperties": {},
+            "description": "Metadata about a field's characteristics.",
+            "properties": {
+                "cardinality": {
+                    "description": "Number of unique values in this field.",
+                    "type": [
+                        "string",
+                        "integer"
+                    ]
+                },
+                "format": {
+                    "description": "Expected format pattern.",
+                    "type": "string"
+                },
+                "hint": {
+                    "description": "A hint for the Agent about how to use this field.",
+                    "type": "string"
+                },
+                "samples": {
+                    "description": "Sample values for this field (useful for whitelist validation).",
+                    "items": {},
+                    "type": "array"
+                },
+                "vector": {
+                    "description": "For VECTOR fields, specifies vector dimensions and distance function.",
+                    "properties": {
+                        "dimensions": {
+                            "description": "Number of dimensions in the vector.",
+                            "type": "integer"
+                        },
+                        "distanceFunction": {
+                            "description": "Distance function to use for similarity search.",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "dimensions"
+                    ],
+                    "type": "object"
+                },
+                "whitelistOnly": {
+                    "description": "If true, only values from provided samples/examples are valid.",
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
         },
-        "resourceId": {
-          "description": "The unique domain-qualified identifier for this resource.",
-          "type": "string"
-        },
-        "semanticDescription": {
-          "description": "A detailed semantic description of the resource.",
-          "type": "string"
-        },
-        "sources": {
-          "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
-          "items": {
-            "$ref": "#/$defs/SourceDefinition"
-          },
-          "type": "array"
-        },
-        "tags": {
-          "description": "Tags for categorization and filtering.",
-          "items": {
+        "IntentClass": {
+            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
+            "enum": [
+                "*",
+                "INGEST",
+                "LOOKUP",
+                "QUERY",
+                "REVISE"
+            ],
             "type": "string"
-          },
-          "type": "array"
+        },
+        "SourceDefinition": {
+            "description": "Definition of a source within a resource.\nEach source represents a specific data source (table, collection, prefix, etc.)\nwithin a backend, with its own field definitions.",
+            "properties": {
+                "fields": {
+                    "description": "Field definitions for this source.\n\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
+                    "items": {
+                        "$ref": "#/$defs/Field"
+                    },
+                    "type": "array"
+                },
+                "source": {
+                    "description": "Source identifier in the backend.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\"), the format can be {table_name} or {schema_name}.{table_name}\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "source"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Required definition**: `resources` must be provided. ADP operations like `adp.discover`\nand `adp.describe` rely on these explicit resource definitions.",
+    "properties": {
+        "resources": {
+            "description": "List of resource definitions.\n\nRequired. Each entry binds a `resourceId` to one backend and (currently) one source.",
+            "items": {
+                "$ref": "#/$defs/CuratedResource"
+            },
+            "type": "array"
         },
         "version": {
-          "default": 1,
-          "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
-          "type": "integer"
+            "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
+            "type": "string"
         }
-      },
-      "required": [
-        "backendId",
-        "intentClasses",
-        "resourceId",
-        "sources",
+    },
+    "required": [
+        "resources",
         "version"
-      ],
-      "type": "object"
-    },
-    "Field": {
-      "description": "Definition of a single field in a resource.",
-      "properties": {
-        "description": {
-          "description": "Human-readable description of the field.",
-          "type": "string"
-        },
-        "fieldId": {
-          "description": "The field identifier.",
-          "type": "string"
-        },
-        "isMasked": {
-          "default": false,
-          "description": "If true, this field is masked/redacted by policy.",
-          "type": "boolean"
-        },
-        "isSearchable": {
-          "default": false,
-          "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
-          "type": "boolean"
-        },
-        "metadata": {
-          "$ref": "#/$defs/FieldMetadata",
-          "description": "Additional metadata about the field."
-        },
-        "samples": {
-          "description": "Sample values for this field.",
-          "items": {},
-          "type": "array"
-        },
-        "type": {
-          "description": "The data type of this field.",
-          "enum": [
-            "BLOB",
-            "BOOLEAN",
-            "DATE",
-            "FLOAT",
-            "INTEGER",
-            "JSON",
-            "STRING",
-            "TIMESTAMP",
-            "VECTOR"
-          ],
-          "type": "string"
-        }
-      },
-      "required": ["fieldId"],
-      "type": "object"
-    },
-    "FieldMetadata": {
-      "additionalProperties": {},
-      "description": "Metadata about a field's characteristics.",
-      "properties": {
-        "cardinality": {
-          "description": "Number of unique values in this field.",
-          "type": ["string", "integer"]
-        },
-        "format": {
-          "description": "Expected format pattern.",
-          "type": "string"
-        },
-        "hint": {
-          "description": "A hint for the Agent about how to use this field.",
-          "type": "string"
-        },
-        "samples": {
-          "description": "Sample values for this field (useful for whitelist validation).",
-          "items": {},
-          "type": "array"
-        },
-        "vector": {
-          "description": "For VECTOR fields, specifies vector dimensions and distance function.",
-          "properties": {
-            "dimensions": {
-              "description": "Number of dimensions in the vector.",
-              "type": "integer"
-            },
-            "distanceFunction": {
-              "description": "Distance function to use for similarity search.",
-              "type": "string"
-            }
-          },
-          "required": ["dimensions"],
-          "type": "object"
-        },
-        "whitelistOnly": {
-          "description": "If true, only values from provided samples/examples are valid.",
-          "type": "boolean"
-        }
-      },
-      "type": "object"
-    },
-    "IntentClass": {
-      "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
-      "enum": ["*", "INGEST", "LOOKUP", "QUERY", "REVISE"],
-      "type": "string"
-    },
-    "SourceDefinition": {
-      "description": "Definition of a source within a resource.\nEach source represents a specific data source (table, collection, prefix, etc.)\nwithin a backend, with its own field definitions.",
-      "properties": {
-        "fields": {
-          "description": "Field definitions for this source.\n\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
-          "items": {
-            "$ref": "#/$defs/Field"
-          },
-          "type": "array"
-        },
-        "source": {
-          "description": "Source identifier in the backend.\n\nInterpretation depends on the backend type:\n- RDBMS: table or view name (e.g., \"v_failures_consolidated\"), the format can be {table_name} or {schema_name}.{table_name}\n- Vector: collection or index name (e.g., \"bank-summaries\")\n- S3: prefix pattern (e.g., \"finance/reports/\")\n- NoSQL: collection or namespace name\n- Graph: node label or pattern",
-          "type": "string"
-        }
-      },
-      "required": ["source"],
-      "type": "object"
-    }
-  },
-  "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Required definition**: `resources` must be provided. ADP operations like `adp.discover`\nand `adp.describe` rely on these explicit resource definitions.",
-  "properties": {
-    "resources": {
-      "description": "List of resource definitions.\n\nRequired. Each entry binds a `resourceId` to one backend and (currently) one source.",
-      "items": {
-        "$ref": "#/$defs/CuratedResource"
-      },
-      "type": "array"
-    },
-    "version": {
-      "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
-      "type": "string"
-    }
-  },
-  "required": ["resources", "version"],
-  "type": "object"
+    ],
+    "type": "object"
 }
+

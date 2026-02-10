@@ -1,210 +1,250 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$defs": {
-    "Backend": {
-      "description": "Definition of a physical backend data source.",
-      "properties": {
-        "config": {
-          "$ref": "#/$defs/BackendConfig",
-          "description": "Backend-specific configuration."
-        },
-        "credentials": {
-          "$ref": "#/$defs/CredentialReference",
-          "description": "Credential reference for authentication."
-        },
-        "id": {
-          "description": "Unique identifier for this backend.\nReferenced by resources in the semantic manifest via `backendId`.",
-          "type": "string"
-        },
-        "metadata": {
-          "$ref": "#/$defs/Record<string,unknown>",
-          "description": "Additional metadata about the backend."
-        },
-        "type": {
-          "$ref": "#/$defs/BackendType",
-          "description": "Type of backend."
-        }
-      },
-      "required": ["config", "id", "type"],
-      "type": "object"
-    },
-    "BackendConfig": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "properties": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+        "Backend": {
+            "description": "Definition of a physical backend data source.",
+            "properties": {
+                "config": {
+                    "$ref": "#/$defs/BackendConfig",
+                    "description": "Backend-specific configuration."
+                },
+                "credentials": {
+                    "$ref": "#/$defs/CredentialReference",
+                    "description": "Credential reference for authentication."
+                },
+                "id": {
+                    "description": "Unique identifier for this backend.\nReferenced by resources in the semantic manifest via `backendId`.",
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/$defs/Record<string,unknown>",
+                    "description": "Additional metadata about the backend."
+                },
                 "type": {
-                  "const": "RDBMS",
-                  "type": "string"
+                    "$ref": "#/$defs/BackendType",
+                    "description": "Type of backend."
                 }
-              },
-              "required": ["type"],
-              "type": "object"
             },
-            {
-              "$ref": "#/$defs/RDBMSBackendConfig"
-            }
-          ]
+            "required": [
+                "config",
+                "id",
+                "type"
+            ],
+            "type": "object"
         },
-        {
-          "allOf": [
-            {
-              "properties": {
+        "BackendConfig": {
+            "anyOf": [
+                {
+                    "allOf": [
+                        {
+                            "properties": {
+                                "type": {
+                                    "const": "RDBMS",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ],
+                            "type": "object"
+                        },
+                        {
+                            "$ref": "#/$defs/RDBMSBackendConfig"
+                        }
+                    ]
+                },
+                {
+                    "allOf": [
+                        {
+                            "properties": {
+                                "type": {
+                                    "const": "VECTOR",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ],
+                            "type": "object"
+                        },
+                        {
+                            "$ref": "#/$defs/VectorBackendConfig"
+                        }
+                    ]
+                },
+                {
+                    "allOf": [
+                        {
+                            "properties": {
+                                "type": {
+                                    "const": "S3",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ],
+                            "type": "object"
+                        },
+                        {
+                            "$ref": "#/$defs/S3BackendConfig"
+                        }
+                    ]
+                },
+                {
+                    "allOf": [
+                        {
+                            "properties": {
+                                "type": {
+                                    "enum": [
+                                        "GRAPH",
+                                        "NOSQL"
+                                    ],
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ],
+                            "type": "object"
+                        },
+                        {
+                            "$ref": "#/$defs/Record<string,unknown>"
+                        }
+                    ]
+                }
+            ],
+            "description": "Backend-specific configuration.\nEach backend type has its own configuration structure."
+        },
+        "BackendType": {
+            "description": "Supported backend types for physical data sources.",
+            "enum": [
+                "GRAPH",
+                "NOSQL",
+                "RDBMS",
+                "S3",
+                "VECTOR"
+            ],
+            "type": "string"
+        },
+        "CredentialReference": {
+            "description": "Reference to credentials stored externally.",
+            "properties": {
+                "key": {
+                    "description": "The key or path to the credential.\n\nFor `env` type: The environment variable name (e.g., \"DB_PASSWORD\").\n\nFor `secret` type: The secret identifier/path in the secret manager.\nThe format depends on the manager:\n- AWS Secrets Manager: Secret name or ARN (e.g., \"production/db-credentials\")\n- HashiCorp Vault: Secret path (e.g., \"secret/data/database\")\n- Azure Key Vault: Secret name (e.g., \"db-connection-string\")\n- Google Secret Manager: Secret name (e.g., \"projects/PROJECT_ID/secrets/SECRET_NAME\")\n\nFor `file` type: Absolute or relative file path (e.g., \"/etc/secrets/db-password.txt\").",
+                    "type": "string"
+                },
+                "manager": {
+                    "description": "Secret manager identifier (required when `type` is `\"secret\"`).\n\nCommon values:\n- `\"AWS_SECRETS_MANAGER\"` - AWS Secrets Manager\n- `\"HASHICORP_VAULT\"` - HashiCorp Vault\n- `\"AZURE_KEY_VAULT\"` - Azure Key Vault\n- `\"GCP_SECRET_MANAGER\"` - Google Cloud Secret Manager\n- `\"KUBERNETES_SECRET\"` - Kubernetes Secrets\n- Custom string for other secret managers",
+                    "type": "string"
+                },
                 "type": {
-                  "const": "VECTOR",
-                  "type": "string"
+                    "description": "Type of credential reference.\n- `env`: Environment variable\n- `secret`: Secret manager (AWS Secrets Manager, HashiCorp Vault, etc.)\n- `file`: Path to credential file",
+                    "enum": [
+                        "env",
+                        "file",
+                        "secret"
+                    ],
+                    "type": "string"
                 }
-              },
-              "required": ["type"],
-              "type": "object"
             },
-            {
-              "$ref": "#/$defs/VectorBackendConfig"
-            }
-          ]
+            "required": [
+                "key",
+                "type"
+            ],
+            "type": "object"
         },
-        {
-          "allOf": [
-            {
-              "properties": {
-                "type": {
-                  "const": "S3",
-                  "type": "string"
+        "RDBMSBackendConfig": {
+            "description": "Configuration for RDBMS backend types.",
+            "properties": {
+                "properties": {
+                    "$ref": "#/$defs/Record<string,unknown>",
+                    "description": "Additional properties for the RDBMS backend."
+                },
+                "schema": {
+                    "description": "Database schema name (optional).",
+                    "type": "string"
+                },
+                "uri": {
+                    "description": "Connection URI for the database.",
+                    "type": "string"
                 }
-              },
-              "required": ["type"],
-              "type": "object"
             },
-            {
-              "$ref": "#/$defs/S3BackendConfig"
-            }
-          ]
+            "required": [
+                "uri"
+            ],
+            "type": "object"
         },
-        {
-          "allOf": [
-            {
-              "properties": {
-                "type": {
-                  "enum": ["GRAPH", "NOSQL"],
-                  "type": "string"
+        "Record<string,unknown>": {
+            "type": "object"
+        },
+        "S3BackendConfig": {
+            "description": "Configuration for S3 backend types.",
+            "properties": {
+                "endpoint": {
+                    "description": "Endpoint URL for S3-compatible services (optional).",
+                    "type": "string"
+                },
+                "region": {
+                    "description": "AWS region (or equivalent for other S3-compatible services).",
+                    "type": "string"
+                },
+                "uri": {
+                    "description": "S3 bucket URI.",
+                    "type": "string"
                 }
-              },
-              "required": ["type"],
-              "type": "object"
             },
-            {
-              "$ref": "#/$defs/Record<string,unknown>"
-            }
-          ]
+            "required": [
+                "region",
+                "uri"
+            ],
+            "type": "object"
+        },
+        "VectorBackendConfig": {
+            "description": "Configuration for Vector backend types.",
+            "properties": {
+                "dimensions": {
+                    "description": "Vector dimensions (optional, may be defined in semantic layer).",
+                    "type": "integer"
+                },
+                "endpoint": {
+                    "description": "API endpoint (if required).",
+                    "type": "string"
+                },
+                "indexName": {
+                    "description": "Index or collection name.",
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "Vector database provider.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "indexName",
+                "provider"
+            ],
+            "type": "object"
         }
-      ],
-      "description": "Backend-specific configuration.\nEach backend type has its own configuration structure."
     },
-    "BackendType": {
-      "description": "Supported backend types for physical data sources.",
-      "enum": ["GRAPH", "NOSQL", "RDBMS", "S3", "VECTOR"],
-      "type": "string"
-    },
-    "CredentialReference": {
-      "description": "Reference to credentials stored externally.",
-      "properties": {
-        "key": {
-          "description": "The key or path to the credential.\n\nFor `env` type: The environment variable name (e.g., \"DB_PASSWORD\").\n\nFor `secret` type: The secret identifier/path in the secret manager.\nThe format depends on the manager:\n- AWS Secrets Manager: Secret name or ARN (e.g., \"production/db-credentials\")\n- HashiCorp Vault: Secret path (e.g., \"secret/data/database\")\n- Azure Key Vault: Secret name (e.g., \"db-connection-string\")\n- Google Secret Manager: Secret name (e.g., \"projects/PROJECT_ID/secrets/SECRET_NAME\")\n\nFor `file` type: Absolute or relative file path (e.g., \"/etc/secrets/db-password.txt\").",
-          "type": "string"
+    "description": "Root structure for the physical manifest (physical.yaml).",
+    "properties": {
+        "backends": {
+            "description": "List of backend definitions.",
+            "items": {
+                "$ref": "#/$defs/Backend"
+            },
+            "type": "array"
         },
-        "manager": {
-          "description": "Secret manager identifier (required when `type` is `\"secret\"`).\n\nCommon values:\n- `\"AWS_SECRETS_MANAGER\"` - AWS Secrets Manager\n- `\"HASHICORP_VAULT\"` - HashiCorp Vault\n- `\"AZURE_KEY_VAULT\"` - Azure Key Vault\n- `\"GCP_SECRET_MANAGER\"` - Google Cloud Secret Manager\n- `\"KUBERNETES_SECRET\"` - Kubernetes Secrets\n- Custom string for other secret managers",
-          "type": "string"
-        },
-        "type": {
-          "description": "Type of credential reference.\n- `env`: Environment variable\n- `secret`: Secret manager (AWS Secrets Manager, HashiCorp Vault, etc.)\n- `file`: Path to credential file",
-          "enum": ["env", "file", "secret"],
-          "type": "string"
+        "version": {
+            "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
+            "type": "string"
         }
-      },
-      "required": ["key", "type"],
-      "type": "object"
     },
-    "RDBMSBackendConfig": {
-      "description": "Configuration for RDBMS backend types.",
-      "properties": {
-        "properties": {
-          "$ref": "#/$defs/Record<string,unknown>",
-          "description": "Additional properties for the RDBMS backend."
-        },
-        "schema": {
-          "description": "Database schema name (optional).",
-          "type": "string"
-        },
-        "uri": {
-          "description": "Connection URI for the database.",
-          "type": "string"
-        }
-      },
-      "required": ["uri"],
-      "type": "object"
-    },
-    "Record<string,unknown>": {
-      "type": "object"
-    },
-    "S3BackendConfig": {
-      "description": "Configuration for S3 backend types.",
-      "properties": {
-        "endpoint": {
-          "description": "Endpoint URL for S3-compatible services (optional).",
-          "type": "string"
-        },
-        "region": {
-          "description": "AWS region (or equivalent for other S3-compatible services).",
-          "type": "string"
-        },
-        "uri": {
-          "description": "S3 bucket URI.",
-          "type": "string"
-        }
-      },
-      "required": ["region", "uri"],
-      "type": "object"
-    },
-    "VectorBackendConfig": {
-      "description": "Configuration for Vector backend types.",
-      "properties": {
-        "dimensions": {
-          "description": "Vector dimensions (optional, may be defined in semantic layer).",
-          "type": "integer"
-        },
-        "endpoint": {
-          "description": "API endpoint (if required).",
-          "type": "string"
-        },
-        "indexName": {
-          "description": "Index or collection name.",
-          "type": "string"
-        },
-        "provider": {
-          "description": "Vector database provider.",
-          "type": "string"
-        }
-      },
-      "required": ["indexName", "provider"],
-      "type": "object"
-    }
-  },
-  "description": "Root structure for the physical manifest (physical.yaml).",
-  "properties": {
-    "backends": {
-      "description": "List of backend definitions.",
-      "items": {
-        "$ref": "#/$defs/Backend"
-      },
-      "type": "array"
-    },
-    "version": {
-      "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
-      "type": "string"
-    }
-  },
-  "required": ["backends", "version"],
-  "type": "object"
+    "required": [
+        "backends",
+        "version"
+    ],
+    "type": "object"
 }
+
