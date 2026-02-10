@@ -289,7 +289,6 @@ export interface SourceDefinition {
   /**
    * Field definitions for this source.
    *
-   * **Bootstrap behavior**: If omitted or empty, fields will be auto-discovered from
    * the backend schema by introspecting the source structure:
    * - For RDBMS: columns from table/view schema
    * - For Vector: metadata fields from collection schema
@@ -313,18 +312,8 @@ export interface SourceDefinition {
  * multiple sources per resource. When multiple sources are needed, create separate
  * resources with different resourceIds.
  *
- * **Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal
- * information and let the system auto-discover the rest:
- * - If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)
- * - If `sources` is omitted, all sources from the backend will be discovered and a resource created for each
- * - If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema
- * - If `intentClasses` is omitted, defaults to `["*"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)
- * - If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)
- * - If `intentClasses` contains `"*"`, acts as a wildcard accepting any intent class
- * - If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)
- * - If `description` is omitted, will be auto-generated from source name
- * - If `semanticDescription` is omitted, will be auto-generated from backend metadata if available
- * - If `tags` is omitted, will be auto-generated from backend type and source
+ * **Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,
+ * resources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).
  *
  * @category Curation Semantic Manifest
  * @example
@@ -345,66 +334,6 @@ export interface SourceDefinition {
  *     }
  *   ]
  * }
- * @example
- * // Wildcard intent class - explicit wildcard using "*"
- * {
- *   "resourceId": "com.acme.finance:bank_failures",
- *   "intentClasses": ["*"],
- *   "version": 1,
- *   "description": "Bank failure records",
- *   "backendId": "finance_sql",
- *   "sources": [
- *     {
- *       "source": "v_failures_consolidated",
- *       "fields": [
- *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
- *       ]
- *     }
- *   ]
- * }
- * @example
- * // Wildcard intent class - omit intentClasses (defaults to ["*"])
- * {
- *   "resourceId": "com.acme.finance:bank_failures",
- *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
- *   "version": 1,
- *   "description": "Bank failure records",
- *   "backendId": "finance_sql",
- *   "sources": [
- *     {
- *       "source": "v_failures_consolidated",
- *       "fields": [
- *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
- *       ]
- *     }
- *   ]
- * }
- * @example
- * // Bootstrap mode - minimal definition (auto-discover fields)
- * {
- *   "backendId": "finance_sql",
- *   "sources": [
- *     { "source": "v_failures_consolidated" }
- *     // fields will be auto-discovered from table schema
- *   ]
- *   // resourceId will be auto-generated
- *   // intentClasses omitted = defaults to ["*"] (wildcard), accepts any intent class
- *   // version omitted = defaults to 1 (version numbers start from 1)
- *   // description will be auto-generated
- * }
- * @example
- * // Bootstrap mode - discover all sources from backend
- * {
- *   "backendId": "finance_sql"
- *   // sources omitted = discover all tables/views and create a resource for each
- * }
- * @example
- * // Future: Multiple sources per resource (not yet supported)
- * // Currently, create separate resources instead:
- * // - resourceId: "com.acme.finance:bank_failures" with source: "bank_failures"
- * // - resourceId: "com.acme.finance:bank_mergers" with source: "bank_mergers"
  */
 export interface CuratedResource extends Resource {
   /**
@@ -420,17 +349,10 @@ export interface CuratedResource extends Resource {
    * The array structure is preserved for future support of multiple sources per resource.
    * When multiple sources are needed, create separate resources with different resourceIds.
    *
-   * Each source represents a specific data source within the backend (table, collection, etc.)
-   * and has its own field definitions.
-   *
-   * **Bootstrap behavior**: If omitted, the system will discover all available sources
-   * from the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)
-   * and create a separate resource for each discovered source.
-   *
-   * If provided but a source's `fields` is omitted or empty, fields will be auto-discovered
-   * for that specific source.
+   * Each source represents a specific data source within the backend (table, collection, prefix, etc.)
+   * and has its own field definitions. At least one source MUST be provided for each resource.
    */
-  sources?: SourceDefinition[];
+  sources: SourceDefinition[];
 }
 
 /**
@@ -459,20 +381,10 @@ export interface CuratedResource extends Resource {
 /**
  * Root structure for the semantic manifest (semantic.yaml).
  *
- * **Bootstrap Mode**: For the simplest setup, provide required `defaultDomain` and omit the
- * `resources` array entirely. The system will automatically discover all resources from all
- * backends defined in `physical.yaml` at runtime and auto-generate resourceIds using `defaultDomain`.
+ * **Required definition**: `resources` must be provided. ADP operations like `adp.discover`
+ * and `adp.describe` rely on these explicit resource definitions.
  *
  * @category Curation Semantic Manifest
- * @example
- * // Full auto-discovery bootstrap mode - simplest setup
- * {
- *   "defaultDomain": "com.acme.finance"
- *   // No resources array needed - all resources will be auto-discovered from physical.yaml backends
- *   // For each backend, all sources (tables, collections, etc.) will be discovered
- *   // ResourceIds will be auto-generated as "{defaultDomain}:{source}"
- *   // Fields will be auto-discovered from backend schema
- * }
  * @example
  * // Full manual definition
  * {
@@ -493,22 +405,6 @@ export interface CuratedResource extends Resource {
  *     }
  *   ]
  * }
- * @example
- * // Partial bootstrap - specify some resources, auto-discover others
- * {
- *   "defaultDomain": "com.acme.finance",
- *   "resources": [
- *     {
- *       "backendId": "finance_sql",
- *       "sources": [
- *         { "source": "v_failures_consolidated" }
- *         // fields will be auto-discovered from table schema
- *       ]
- *       // resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
- *     }
- *   ]
- *   // Other backends in physical.yaml will still be auto-discovered
- * }
  */
 export interface SemanticManifest {
   /**
@@ -518,40 +414,11 @@ export interface SemanticManifest {
   version: string;
 
   /**
-   * Default domain prefix for auto-generating resourceIds in bootstrap mode.
-   * **Required.** Cannot be omitted.
-   *
-   * **Bootstrap behavior**:
-   * - When `resources` is omitted, this domain is used to generate resourceIds for all
-   *   auto-discovered resources from all backends in `physical.yaml`.
-   * - When `resources` is provided but a resource doesn't specify `resourceId`, it will be
-   *   auto-generated using this domain.
-   *
-   * Format should be reverse DNS (e.g., "com.acme.finance").
-   *
-   * @example "com.acme.finance"
-   */
-  defaultDomain: string;
-
-  /**
    * List of resource definitions.
    *
-   * **Bootstrap behavior**: If omitted, the system will automatically discover all resources
-   * from all backends defined in `physical.yaml` at runtime:
-   * - For each backend, all available sources will be discovered (tables, collections, prefixes, etc.)
-   * - A separate resource will be created for each discovered source (one source per resource)
-   * - ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)
-   * - Fields will be auto-discovered from backend schema introspection for each source
-   * - `intentClasses` will default to `["*"]` (wildcard - accepts any intent class)
-   * - `version` will default to `1` (version numbers start from 1)
-   * - All other resource properties (description, etc.) will use defaults
-   *
-   * If provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).
-   * Bootstrap resources will have missing fields auto-generated during manifest processing.
-   * Resources explicitly defined here will be used; other backends may still be auto-discovered
-   * depending on implementation behavior.
+   * Required. Each entry binds a `resourceId` to one backend and (currently) one source.
    */
-  resources?: CuratedResource[];
+  resources: CuratedResource[];
 }
 
 /* ============================================================================

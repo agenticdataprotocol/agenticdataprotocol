@@ -7,21 +7,9 @@
 # resources with different resourceIds.
 
 # ============================================================================
-# Bootstrap Mode - Simplest Setup
-# ============================================================================
-# Uncomment the following for full auto-discovery:
-# defaultDomain: "com.acme.finance"
-# # No resources array needed - all resources will be auto-discovered from physical.yaml
-# # For each backend, all sources (tables, collections, etc.) will be discovered
-# # A separate resource will be created for each source (one source per resource)
-# # ResourceIds will be auto-generated as "{defaultDomain}:{source}"
-# # Fields will be auto-discovered from backend schema
-
-# ============================================================================
 # Full Manual Definition
 # ============================================================================
 version: "1.0.0"
-defaultDomain: "com.acme.finance"
 
 resources:
   # RDBMS Resource - Full definition with single source
@@ -133,8 +121,8 @@ resources:
 
   # Wildcard Intent Class Example - omit intentClasses (same as ["*"])
   - resourceId: "com.acme.finance:flexible_resource"
-    # intentClasses omitted = defaults to ["*"] (wildcard)
-    # version omitted = defaults to 1
+    intentClasses: ["*"] # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE)
+    version: 1
     description: "Flexible resource with omitted intentClasses"
     backendId: "finance_sql"
     sources:
@@ -192,29 +180,3 @@ resources:
             type: "INTEGER"
             description: "Size of the file in bytes"
 
-# ============================================================================
-# Partial Bootstrap Mode Example
-# ============================================================================
-# You can also mix manual and bootstrap definitions:
-# defaultDomain: "com.acme.finance"
-# resources:
-#   # Minimal bootstrap definition - fields will be auto-discovered
-#   - backendId: "finance_sql"
-#     sources:
-#       - source: "v_failures_consolidated"
-#         # fields will be auto-discovered from table schema
-#     # resourceId will be auto-generated as "com.acme.finance:v_failures_consolidated"
-#     # intentClasses omitted = defaults to ["*"] (wildcard, accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)
-#     # version omitted = defaults to 1 (version numbers start from 1)
-#
-#   # Full manual definition with single source (current limitation)
-#   - resourceId: "com.acme.finance:custom_view"
-#     backendId: "finance_sql"
-#     sources:
-#       - source: "custom_analytics_view"
-#         fields:
-#           - fieldId: "custom_field"
-#             type: "STRING"
-#             description: "Custom field definition"
-#   # Note: Currently only one source per resource is supported.
-#   # For multiple sources, create separate resources.

@@ -602,7 +602,7 @@ export interface Resource {
   /**
    * The unique domain-qualified identifier for this resource.
    */
-  resourceId?: ResourceId;
+  resourceId: ResourceId;
 
   /**
    * The version number of this resource's schema.
@@ -616,15 +616,12 @@ export interface Resource {
    * @example 1
    * @example 2
    */
-  version?: number;
+  version: number;
 
   /**
    * The intent classes this resource supports.
    *
-   * **Default**: If omitted, defaults to `["*"]` (wildcard - accepts any intent class).
-   *
    * **Wildcard Support**: To accept any intent class, you can:
-   * - Omit this field (defaults to `["*"]`)
    * - Explicitly specify `["*"]` (explicit wildcard)
    *
    * When `"*"` is included in the array, the resource accepts all intent classes
@@ -639,7 +636,7 @@ export interface Resource {
    * @example ["*"]
    * @example [] // No intent classes accepted (resource disabled)
    */
-  intentClasses?: IntentClass[];
+  intentClasses: IntentClass[];
 
   /**
    * A brief description of the resource.
@@ -743,7 +740,7 @@ export interface Field {
    * The data type of this field.
    * @example "STRING", "INTEGER", "BOOLEAN", "DATE"
    */
-  type: FieldType;
+  type?: FieldType;
 
   /**
    * Human-readable description of the field.
