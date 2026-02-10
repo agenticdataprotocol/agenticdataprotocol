@@ -410,13 +410,23 @@
                     "type": "array"
                 },
                 "type": {
-                    "$ref": "#/$defs/FieldType",
-                    "description": "The data type of this field."
+                    "description": "The data type of this field.",
+                    "enum": [
+                        "BLOB",
+                        "BOOLEAN",
+                        "DATE",
+                        "FLOAT",
+                        "INTEGER",
+                        "JSON",
+                        "STRING",
+                        "TIMESTAMP",
+                        "VECTOR"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "fieldId",
-                "type"
+                "fieldId"
             ],
             "type": "object"
         },
@@ -1146,7 +1156,7 @@
                     "type": "string"
                 },
                 "intentClasses": {
-                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
                     "items": {
                         "$ref": "#/$defs/IntentClass"
                     },
@@ -1168,11 +1178,15 @@
                     "type": "array"
                 },
                 "version": {
-                    "default": 1,
-                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
                     "type": "integer"
                 }
             },
+            "required": [
+                "intentClasses",
+                "resourceId",
+                "version"
+            ],
             "type": "object"
         },
         "ResourceId": {

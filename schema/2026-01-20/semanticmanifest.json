@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$defs": {
         "CuratedResource": {
-            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Bootstrap Mode**: For quick setup without manual field definitions, you can provide minimal\ninformation and let the system auto-discover the rest:\n- If `resourceId` is omitted, it will be auto-generated from `{defaultDomain}:{source}` (sanitized)\n- If `sources` is omitted, all sources from the backend will be discovered and a resource created for each\n- If `sources[].fields` is omitted or empty, fields will be auto-discovered from the backend schema\n- If `intentClasses` is omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class: QUERY, LOOKUP, INGEST, REVISE)\n- If `intentClasses` is an empty array `[]`, no intent classes are accepted (resource is disabled)\n- If `intentClasses` contains `\"*\"`, acts as a wildcard accepting any intent class\n- If `version` is omitted, defaults to `1` (version numbers start from 1; resource can have multiple versions)\n- If `description` is omitted, will be auto-generated from source name\n- If `semanticDescription` is omitted, will be auto-generated from backend metadata if available\n- If `tags` is omitted, will be auto-generated from backend type and source",
+            "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,\nresources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).",
             "properties": {
                 "backendId": {
                     "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
@@ -13,7 +13,7 @@
                     "type": "string"
                 },
                 "intentClasses": {
-                    "description": "The intent classes this resource supports.\n\n**Default**: If omitted, defaults to `[\"*\"]` (wildcard - accepts any intent class).\n\n**Wildcard Support**: To accept any intent class, you can:\n- Omit this field (defaults to `[\"*\"]`)\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+                    "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
                     "items": {
                         "$ref": "#/$defs/IntentClass"
                     },
@@ -28,7 +28,7 @@
                     "type": "string"
                 },
                 "sources": {
-                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, etc.)\nand has its own field definitions.\n\n**Bootstrap behavior**: If omitted, the system will discover all available sources\nfrom the backend (e.g., all tables in an RDBMS, all collections in a Vector DB)\nand create a separate resource for each discovered source.\n\nIf provided but a source's `fields` is omitted or empty, fields will be auto-discovered\nfor that specific source.",
+                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
                     "items": {
                         "$ref": "#/$defs/SourceDefinition"
                     },
@@ -42,13 +42,16 @@
                     "type": "array"
                 },
                 "version": {
-                    "default": 1,
-                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. If omitted, the default version number is 1.\nWhen describing a resource, the client may request a specific version; if not\nspecified, the server returns the latest version.",
+                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
                     "type": "integer"
                 }
             },
             "required": [
-                "backendId"
+                "backendId",
+                "intentClasses",
+                "resourceId",
+                "sources",
+                "version"
             ],
             "type": "object"
         },
@@ -83,13 +86,23 @@
                     "type": "array"
                 },
                 "type": {
-                    "$ref": "#/$defs/FieldType",
-                    "description": "The data type of this field."
+                    "description": "The data type of this field.",
+                    "enum": [
+                        "BLOB",
+                        "BOOLEAN",
+                        "DATE",
+                        "FLOAT",
+                        "INTEGER",
+                        "JSON",
+                        "STRING",
+                        "TIMESTAMP",
+                        "VECTOR"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "fieldId",
-                "type"
+                "fieldId"
             ],
             "type": "object"
         },
@@ -141,21 +154,6 @@
             },
             "type": "object"
         },
-        "FieldType": {
-            "description": "Supported field data types.",
-            "enum": [
-                "BLOB",
-                "BOOLEAN",
-                "DATE",
-                "FLOAT",
-                "INTEGER",
-                "JSON",
-                "STRING",
-                "TIMESTAMP",
-                "VECTOR"
-            ],
-            "type": "string"
-        },
         "IntentClass": {
             "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
             "enum": [
@@ -171,7 +169,7 @@
             "description": "Definition of a source within a resource.\nEach source represents a specific data source (table, collection, prefix, etc.)\nwithin a backend, with its own field definitions.",
             "properties": {
                 "fields": {
-                    "description": "Field definitions for this source.\n\n**Bootstrap behavior**: If omitted or empty, fields will be auto-discovered from\nthe backend schema by introspecting the source structure:\n- For RDBMS: columns from table/view schema\n- For Vector: metadata fields from collection schema\n- For S3: inferred from object structure or metadata\n- For NoSQL: fields from document schema\n- For Graph: properties from node/edge schema\n\nField types will be mapped from backend types to ADP FieldType.\nField IDs will be derived from backend column/field names (sanitized).\nDescriptions will be extracted from backend comments/metadata if available.",
+                    "description": "Field definitions for this source.\n\nWhen provided, these define the ADP-visible field schema for this source.\n\nFor some backends, there may be no stable or meaningful field-level schema\n(for example, opaque blob stores or key/value stores with arbitrary values).\nIn those cases, this property can be safely omitted and the resource will\nbe treated as exposing an opaque or implementation-defined payload.",
                     "items": {
                         "$ref": "#/$defs/Field"
                     },
@@ -188,14 +186,10 @@
             "type": "object"
         }
     },
-    "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Bootstrap Mode**: For the simplest setup, provide required `defaultDomain` and omit the\n`resources` array entirely. The system will automatically discover all resources from all\nbackends defined in `physical.yaml` at runtime and auto-generate resourceIds using `defaultDomain`.",
+    "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Required definition**: `resources` must be provided. ADP operations like `adp.discover`\nand `adp.describe` rely on these explicit resource definitions.",
     "properties": {
-        "defaultDomain": {
-            "description": "Default domain prefix for auto-generating resourceIds in bootstrap mode.\n**Required.** Cannot be omitted.\n\n**Bootstrap behavior**:\n- When `resources` is omitted, this domain is used to generate resourceIds for all\n  auto-discovered resources from all backends in `physical.yaml`.\n- When `resources` is provided but a resource doesn't specify `resourceId`, it will be\n  auto-generated using this domain.\n\nFormat should be reverse DNS (e.g., \"com.acme.finance\").",
-            "type": "string"
-        },
         "resources": {
-            "description": "List of resource definitions.\n\n**Bootstrap behavior**: If omitted, the system will automatically discover all resources\nfrom all backends defined in `physical.yaml` at runtime:\n- For each backend, all available sources will be discovered (tables, collections, prefixes, etc.)\n- A separate resource will be created for each discovered source (one source per resource)\n- ResourceIds will be auto-generated as `{defaultDomain}:{source}` (sanitized)\n- Fields will be auto-discovered from backend schema introspection for each source\n- `intentClasses` will default to `[\"*\"]` (wildcard - accepts any intent class)\n- `version` will default to `1` (version numbers start from 1)\n- All other resource properties (description, etc.) will use defaults\n\nIf provided, resources can be defined in full (with all fields) or in bootstrap mode (minimal fields).\nBootstrap resources will have missing fields auto-generated during manifest processing.\nResources explicitly defined here will be used; other backends may still be auto-discovered\ndepending on implementation behavior.",
+            "description": "List of resource definitions.\n\nRequired. Each entry binds a `resourceId` to one backend and (currently) one source.",
             "items": {
                 "$ref": "#/$defs/CuratedResource"
             },
@@ -207,7 +201,7 @@
         }
     },
     "required": [
-        "defaultDomain",
+        "resources",
         "version"
     ],
     "type": "object"
