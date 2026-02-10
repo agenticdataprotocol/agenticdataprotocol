@@ -119,19 +119,6 @@ resources:
             type: "JSON"
             description: "Flexible data payload"
 
-  # Wildcard Intent Class Example - omit intentClasses (same as ["*"])
-  - resourceId: "com.acme.finance:flexible_resource"
-    intentClasses: ["*"] # Explicit wildcard - accepts any intent class (QUERY, LOOKUP, INGEST, REVISE)
-    version: 1
-    description: "Flexible resource with omitted intentClasses"
-    backendId: "finance_sql"
-    sources:
-      - source: "flexible_table"
-        fields:
-          - fieldId: "id"
-            type: "STRING"
-            description: "Unique identifier"
-
   # Vector Resource - Embeddings
   - resourceId: "com.acme.finance:failure_vectors"
     intentClasses: ["QUERY"]
@@ -154,29 +141,3 @@ resources:
           - fieldId: "metadata"
             type: "JSON"
             description: "Additional metadata about the embedding"
-
-  # S3 Resource - Object Storage
-  - resourceId: "com.acme.finance:reports"
-    intentClasses: ["QUERY"]
-    version: 1
-    description: "Financial reports stored in S3"
-    backendId: "raw_storage"
-    sources:
-      - source: "finance/reports/"
-        fields:
-          - fieldId: "report_id"
-            type: "STRING"
-            description: "Unique identifier for the report"
-          - fieldId: "report_date"
-            type: "DATE"
-            description: "Date of the report"
-          - fieldId: "report_type"
-            type: "STRING"
-            description: "Type of financial report"
-          - fieldId: "file_path"
-            type: "STRING"
-            description: "S3 path to the report file"
-          - fieldId: "file_size"
-            type: "INTEGER"
-            description: "Size of the file in bytes"
-
