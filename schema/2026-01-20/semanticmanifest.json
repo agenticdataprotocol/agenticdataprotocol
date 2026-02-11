@@ -186,7 +186,7 @@
   "description": "Root structure for the semantic manifest (semantic.yaml).\n\n**Required definition**: `resources` must be provided. ADP operations like `adp.discover`\nand `adp.describe` rely on these explicit resource definitions.",
   "properties": {
     "resources": {
-      "description": "List of resource definitions.\n\nRequired. Each entry binds a `resourceId` to one backend and (currently) one source.",
+      "description": "List of resource definitions.\n\nRequired. Each entry binds a `resourceId` to one backend and one source definition.",
       "items": {
         "$ref": "#/$defs/CuratedResource"
       },

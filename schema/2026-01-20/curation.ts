@@ -398,7 +398,7 @@ export interface SemanticManifest {
   /**
    * List of resource definitions.
    *
-   * Required. Each entry binds a `resourceId` to one backend and (currently) one source.
+   * Required. Each entry binds a `resourceId` to one backend and one source definition.
    */
   resources: CuratedResource[];
 }
