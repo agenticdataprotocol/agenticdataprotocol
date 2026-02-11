@@ -1,10 +1,12 @@
 # Semantic Manifest Example
 # Maps physical data sources to ADP resources and defines the "Agent's View" of fields
 #
-# IMPORTANT: While `sources` is defined as an array, currently only a single source
-# element is supported per resource. The array structure is preserved for future
-# support of multiple sources. When multiple sources are needed, create separate
-# resources with different resourceIds.
+# IMPORTANT:
+# - `sources` MUST be a non-empty list (at least one source definition per resource).
+# - While `sources` is defined as an array, currently only a single source element is
+#   supported per resource. The array structure is preserved for future support of
+#   multiple sources. When multiple sources are needed, create separate resources
+#   with different resourceIds.
 
 # ============================================================================
 # Full Manual Definition

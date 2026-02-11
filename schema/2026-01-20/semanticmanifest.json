@@ -28,10 +28,16 @@
                     "type": "string"
                 },
                 "sources": {
-                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
-                    "items": {
+                    "additionalItems": {
                         "$ref": "#/$defs/SourceDefinition"
                     },
+                    "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
+                    "items": [
+                        {
+                            "$ref": "#/$defs/SourceDefinition"
+                        }
+                    ],
+                    "minItems": 1,
                     "type": "array"
                 },
                 "tags": {

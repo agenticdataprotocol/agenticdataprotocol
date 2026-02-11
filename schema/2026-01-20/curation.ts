@@ -348,7 +348,7 @@ export interface CuratedResource extends Resource {
    * Each source represents a specific data source within the backend (table, collection, prefix, etc.)
    * and has its own field definitions. At least one source MUST be provided for each resource.
    */
-  sources: SourceDefinition[];
+  sources: [SourceDefinition, ...SourceDefinition[]];
 }
 
 /**
