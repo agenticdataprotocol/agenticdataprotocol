@@ -1,10 +1,6 @@
 # Policy Manifest Example
 # Defines governance rules and constraints for resource access
 #
-# NOTE: Currently, resources support only a single source. The `source` field
-# in policy rules (MandatoryFilterRule and defaultOrderBy) is optional and
-# can be omitted for single-source resources. The field is reserved for
-# future support of multiple sources per resource.
 
 # ============================================================================
 # Bootstrap Mode - No Enforcements

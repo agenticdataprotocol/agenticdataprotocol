@@ -14,7 +14,11 @@ const SCHEMA_VERSIONS = ["2026-01-20"];
 const CHECK_MODE = process.argv.includes("--check");
 
 /**
- * Apply JSON Schema 2020-12 transformations to a schema file
+ * Apply JSON Schema 2020-12 transformations to a schema file.
+ *
+ * - Updates $schema and definitions → $defs
+ * - Upgrades draft-07 tuple syntax (`items` array + `additionalItems`)
+ *   to draft 2020-12 keywords (`prefixItems` + `items`)
  */
 function applyJsonSchema202012Transformations(schemaPath: string): void {
   let content = readFileSync(schemaPath, "utf-8");
@@ -31,7 +35,45 @@ function applyJsonSchema202012Transformations(schemaPath: string): void {
   // Replace #/definitions/ with #/$defs/
   content = content.replace(/#\/definitions\//g, "#/$defs/");
 
-  writeFileSync(schemaPath, content, "utf-8");
+  const schema = JSON.parse(content);
+  fixDraft07TupleKeywords(schema);
+
+  writeFileSync(schemaPath, JSON.stringify(schema, null, 2) + "\n", "utf-8");
+}
+
+/**
+ * Upgrade draft-07 tuple representation (items: [...], additionalItems)
+ * to draft 2020-12 keywords (prefixItems + items).
+ */
+function fixDraft07TupleKeywords(node: unknown): void {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (Array.isArray((obj as any).items) && Object.prototype.hasOwnProperty.call(obj, "additionalItems")) {
+    const itemsArray = (obj as any).items as unknown[];
+    const additional = (obj as any).additionalItems;
+
+    // First element(s) of the tuple
+    (obj as any).prefixItems = itemsArray;
+
+    // Schema for the rest of the items
+    if (additional === false) {
+      (obj as any).items = false;
+    } else if (additional && typeof additional === "object") {
+      (obj as any).items = additional;
+    } else {
+      delete (obj as any).items;
+    }
+
+    delete (obj as any).additionalItems;
+  }
+
+  for (const value of Object.values(obj)) {
+    fixDraft07TupleKeywords(value);
+  }
 }
 
 /**
@@ -55,13 +97,16 @@ async function generateTypeSchema(
 
       let expectedSchema = generated;
 
-      // Apply transformations
+      // Apply string-based transformations
       expectedSchema = expectedSchema.replace(
         /http:\/\/json-schema\.org\/draft-07\/schema#/g,
         "https://json-schema.org/draft/2020-12/schema",
       );
       expectedSchema = expectedSchema.replace(/"definitions":/g, '"$defs":');
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
+      const parsed = JSON.parse(expectedSchema);
+      fixDraft07TupleKeywords(parsed);
+      expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare
       if (existingSchema.trim() !== expectedSchema.trim()) {
@@ -86,7 +131,7 @@ async function generateTypeSchema(
       throw error;
     }
 
-    // Apply transformations
+    // Apply transformations (2020-12 rewrite and tuple fix)
     applyJsonSchema202012Transformations(outputPath);
 
     console.log(`  ✓ Generated schema for ${typeName}`);
@@ -117,13 +162,16 @@ async function generateSchema(
 
       let expectedSchema = generated;
 
-      // Apply transformations
+      // Apply string-based transformations
       expectedSchema = expectedSchema.replace(
         /http:\/\/json-schema\.org\/draft-07\/schema#/g,
         "https://json-schema.org/draft/2020-12/schema",
       );
       expectedSchema = expectedSchema.replace(/"definitions":/g, '"$defs":');
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
+      const parsed = JSON.parse(expectedSchema);
+      fixDraft07TupleKeywords(parsed);
+      expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare
       if (existingSchema.trim() !== expectedSchema.trim()) {

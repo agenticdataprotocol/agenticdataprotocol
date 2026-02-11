@@ -1,1455 +1,1454 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$defs": {
-        "Capabilities": {
-            "description": "Capabilities available for a resource.",
-            "properties": {
-                "mutables": {
-                    "description": "Available mutable field capabilities (for WRITE operations).",
-                    "items": {
-                        "$ref": "#/$defs/MutableCapability"
-                    },
-                    "type": "array"
-                },
-                "predicates": {
-                    "description": "Available predicate capabilities.",
-                    "items": {
-                        "$ref": "#/$defs/PredicateCapability"
-                    },
-                    "type": "array"
-                },
-                "projections": {
-                    "description": "Available projection capabilities.",
-                    "items": {
-                        "$ref": "#/$defs/ProjectionCapability"
-                    },
-                    "type": "array"
-                }
-            },
-            "type": "object"
-        },
-        "ClientCapabilities": {
-            "description": "Capabilities a client may support.",
-            "properties": {
-                "experimental": {
-                    "additionalProperties": {
-                        "additionalProperties": true,
-                        "properties": {},
-                        "type": "object"
-                    },
-                    "description": "Experimental, non-standard capabilities that the client supports.",
-                    "type": "object"
-                }
-            },
-            "type": "object"
-        },
-        "ConsistencyLevel": {
-            "description": "Data consistency levels for execution results.",
-            "enum": [
-                "EVENTUAL",
-                "STRONG"
-            ],
-            "type": "string"
-        },
-        "Cursor": {
-            "description": "An opaque token used to represent a cursor for pagination.",
-            "type": "string"
-        },
-        "DescribeRequest": {
-            "description": "Request to get the usage contract for a resource.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.describe",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/DescribeRequestParams"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "DescribeRequestParams": {
-            "description": "Parameters for the `adp.describe` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "cursor": {
-                    "description": "An opaque token representing the current pagination position.",
-                    "type": "string"
-                },
-                "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The intent class the Agent plans to use."
-                },
-                "resourceId": {
-                    "description": "The unique identifier of the resource to describe.",
-                    "type": "string"
-                },
-                "version": {
-                    "description": "The version of the resource to describe.\n\n**Multi-version support**: If omitted, the server returns the latest version\nof the resource. If specified, the server returns the usage contract for\nthat specific version. Version numbers start from 1.",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "intentClass",
-                "resourceId"
-            ],
-            "type": "object"
-        },
-        "DescribeResult": {
-            "description": "Result of the `adp.describe` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "intentClass": {
-                    "$ref": "#/$defs/IntentClass",
-                    "description": "The intent class this contract applies to."
-                },
-                "nextCursor": {
-                    "description": "An opaque token representing the pagination position after the last returned result.",
-                    "type": "string"
-                },
-                "resourceId": {
-                    "description": "The resource's full qualified identifier.",
-                    "type": "string"
-                },
-                "usageContract": {
-                    "$ref": "#/$defs/UsageContract",
-                    "description": "The usage contract for this resource and intent."
-                },
-                "version": {
-                    "description": "The version of the resource schema that was returned.\nThis is the specific version that was requested (if specified in the request)\nor the latest version (if version was omitted in the request).",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "intentClass",
-                "resourceId",
-                "usageContract",
-                "version"
-            ],
-            "type": "object"
-        },
-        "DiscoverFilter": {
-            "description": "Filter criteria for the DISCOVER operation.",
-            "properties": {
-                "domainPrefix": {
-                    "description": "Filter resources by domain prefix.",
-                    "type": "string"
-                },
-                "intentClass": {
-                    "description": "Filter resources by intent class.",
-                    "enum": [
-                        "*",
-                        "INGEST",
-                        "LOOKUP",
-                        "QUERY",
-                        "REVISE"
-                    ],
-                    "type": "string"
-                },
-                "keyword": {
-                    "description": "Filter resources by keyword search.",
-                    "type": "string"
-                }
-            },
-            "type": "object"
-        },
-        "DiscoverRequest": {
-            "description": "Request to browse available resources.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.discover",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/DiscoverRequestParams",
-                    "description": "Parameters for the `adp.discover` request."
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method"
-            ],
-            "type": "object"
-        },
-        "DiscoverRequestParams": {
-            "description": "Parameters for the `adp.discover` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "cursor": {
-                    "description": "An opaque token representing the current pagination position.",
-                    "type": "string"
-                },
-                "filter": {
-                    "$ref": "#/$defs/DiscoverFilter",
-                    "description": "Optional filters to narrow down the resource list."
-                }
-            },
-            "type": "object"
-        },
-        "DiscoverResult": {
-            "description": "Result of the `adp.discover` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "nextCursor": {
-                    "description": "An opaque token representing the pagination position after the last returned result.",
-                    "type": "string"
-                },
-                "resources": {
-                    "description": "List of discovered resources matching the filter criteria.",
-                    "items": {
-                        "$ref": "#/$defs/Resource"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "resources"
-            ],
-            "type": "object"
-        },
-        "EmptyResult": {
-            "$ref": "#/$defs/Result",
-            "description": "Common result type for all successful responses."
-        },
-        "ExecuteRequest": {
-            "description": "Request to execute an Intent IR.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.execute",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/ExecuteRequestParams"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "ExecuteRequestParams": {
-            "description": "Parameters for the `adp.execute` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "cursor": {
-                    "description": "An opaque token representing the current pagination position.",
-                    "type": "string"
-                },
-                "intent": {
-                    "$ref": "#/$defs/Intent",
-                    "description": "The Intent to execute."
-                },
-                "resourceId": {
-                    "description": "The resource to execute against.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "intent",
-                "resourceId"
-            ],
-            "type": "object"
-        },
-        "ExecuteResult": {
-            "description": "Result of the `adp.execute` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "executionMetadata": {
-                    "$ref": "#/$defs/ExecutionMetadata",
-                    "description": "Additional metadata about the execution."
-                },
-                "nextCursor": {
-                    "description": "An opaque token representing the pagination position after the last returned result.",
-                    "type": "string"
-                },
-                "results": {
-                    "description": "The result data.",
-                    "items": {
-                        "$ref": "#/$defs/Record<string,unknown>"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "results"
-            ],
-            "type": "object"
-        },
-        "ExecutionMetadata": {
-            "description": "Metadata about execution performance and characteristics.",
-            "properties": {
-                "consistency": {
-                    "description": "Data consistency level of the result.",
-                    "enum": [
-                        "EVENTUAL",
-                        "STRONG"
-                    ],
-                    "type": "string"
-                },
-                "durationMs": {
-                    "description": "Time taken to execute the query in milliseconds.",
-                    "type": "integer"
-                },
-                "sourceSystem": {
-                    "description": "The backend system that served the request.",
-                    "type": "string"
-                }
-            },
-            "type": "object"
-        },
-        "Field": {
-            "description": "Definition of a single field in a resource.",
-            "properties": {
-                "description": {
-                    "description": "Human-readable description of the field.",
-                    "type": "string"
-                },
-                "fieldId": {
-                    "description": "The field identifier.",
-                    "type": "string"
-                },
-                "isMasked": {
-                    "default": false,
-                    "description": "If true, this field is masked/redacted by policy.",
-                    "type": "boolean"
-                },
-                "isSearchable": {
-                    "default": false,
-                    "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
-                    "type": "boolean"
-                },
-                "metadata": {
-                    "$ref": "#/$defs/FieldMetadata",
-                    "description": "Additional metadata about the field."
-                },
-                "samples": {
-                    "description": "Sample values for this field.",
-                    "items": {},
-                    "type": "array"
-                },
-                "type": {
-                    "description": "The data type of this field.",
-                    "enum": [
-                        "BLOB",
-                        "BOOLEAN",
-                        "DATE",
-                        "FLOAT",
-                        "INTEGER",
-                        "JSON",
-                        "STRING",
-                        "TIMESTAMP",
-                        "VECTOR"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "fieldId"
-            ],
-            "type": "object"
-        },
-        "FieldMetadata": {
-            "additionalProperties": {},
-            "description": "Metadata about a field's characteristics.",
-            "properties": {
-                "cardinality": {
-                    "description": "Number of unique values in this field.",
-                    "type": [
-                        "string",
-                        "integer"
-                    ]
-                },
-                "format": {
-                    "description": "Expected format pattern.",
-                    "type": "string"
-                },
-                "hint": {
-                    "description": "A hint for the Agent about how to use this field.",
-                    "type": "string"
-                },
-                "samples": {
-                    "description": "Sample values for this field (useful for whitelist validation).",
-                    "items": {},
-                    "type": "array"
-                },
-                "vector": {
-                    "description": "For VECTOR fields, specifies vector dimensions and distance function.",
-                    "properties": {
-                        "dimensions": {
-                            "description": "Number of dimensions in the vector.",
-                            "type": "integer"
-                        },
-                        "distanceFunction": {
-                            "description": "Distance function to use for similarity search.",
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "dimensions"
-                    ],
-                    "type": "object"
-                },
-                "whitelistOnly": {
-                    "description": "If true, only values from provided samples/examples are valid.",
-                    "type": "boolean"
-                }
-            },
-            "type": "object"
-        },
-        "FieldType": {
-            "description": "Supported field data types.",
-            "enum": [
-                "BLOB",
-                "BOOLEAN",
-                "DATE",
-                "FLOAT",
-                "INTEGER",
-                "JSON",
-                "STRING",
-                "TIMESTAMP",
-                "VECTOR"
-            ],
-            "type": "string"
-        },
-        "IdentityPredicate": {
-            "description": "An identity predicate used for unique key lookups.\nOnly allows the EQ operator to ensure exact matching.",
-            "properties": {
-                "fieldId": {
-                    "description": "The field identifier to filter on.",
-                    "type": "string"
-                },
-                "op": {
-                    "const": "EQ",
-                    "description": "The comparison operator. Must be EQ for identity lookups.",
-                    "type": "string"
-                },
-                "value": {
-                    "description": "The value to compare against. Should be a single value (not an array).",
-                    "type": [
-                        "string",
-                        "integer",
-                        "boolean"
-                    ]
-                }
-            },
-            "required": [
-                "fieldId",
-                "op",
-                "value"
-            ],
-            "type": "object"
-        },
-        "Implementation": {
-            "description": "Describes the ADP implementation.",
-            "properties": {
-                "name": {
-                    "description": "Name of the implementation.",
-                    "type": "string"
-                },
-                "version": {
-                    "description": "Version of the implementation.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "name",
-                "version"
-            ],
-            "type": "object"
-        },
-        "IngestIntent": {
-            "description": "Intent for creating or appending new data.",
-            "properties": {
-                "intentClass": {
-                    "const": "INGEST",
-                    "type": "string"
-                },
-                "payload": {
-                    "description": "The data payload to ingest.\nAn array of records (key-value maps).",
-                    "items": {
-                        "$ref": "#/$defs/Record<string,unknown>"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "intentClass",
-                "payload"
-            ],
-            "type": "object"
-        },
-        "InitializeRequest": {
-            "description": "This request is sent from the client to the server when it first connects.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.initialize",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/InitializeRequestParams"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "InitializeRequestParams": {
-            "description": "Parameters for an `adp.initialize` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "capabilities": {
-                    "$ref": "#/$defs/ClientCapabilities",
-                    "description": "Client capabilities."
-                },
-                "clientInfo": {
-                    "$ref": "#/$defs/Implementation",
-                    "description": "Information about the client implementation."
-                },
-                "protocolVersion": {
-                    "description": "The latest version of the ADP protocol that the client supports.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "capabilities",
-                "clientInfo",
-                "protocolVersion"
-            ],
-            "type": "object"
-        },
-        "InitializeResult": {
-            "description": "After receiving an initialize request from the client, the server sends this response.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "capabilities": {
-                    "$ref": "#/$defs/ServerCapabilities",
-                    "description": "Server capabilities."
-                },
-                "instructions": {
-                    "description": "Instructions describing how to use the server and its features.",
-                    "type": "string"
-                },
-                "protocolVersion": {
-                    "description": "The version of the ADP protocol that the server wants to use.",
-                    "type": "string"
-                },
-                "serverInfo": {
-                    "$ref": "#/$defs/Implementation",
-                    "description": "Information about the server implementation."
-                }
-            },
-            "required": [
-                "capabilities",
-                "protocolVersion",
-                "serverInfo"
-            ],
-            "type": "object"
-        },
-        "Intent": {
-            "anyOf": [
-                {
-                    "$ref": "#/$defs/LookupIntent"
-                },
-                {
-                    "$ref": "#/$defs/QueryIntent"
-                },
-                {
-                    "$ref": "#/$defs/IngestIntent"
-                },
-                {
-                    "$ref": "#/$defs/ReviseIntent"
-                }
-            ],
-            "description": "The Intent structure used in VALIDATE and EXECUTE operations."
-        },
-        "IntentClass": {
-            "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
-            "enum": [
-                "*",
-                "INGEST",
-                "LOOKUP",
-                "QUERY",
-                "REVISE"
-            ],
-            "type": "string"
-        },
-        "IssueSeverity": {
-            "description": "Severity levels for validation issues.\n\n- `BLOCKING` - Execution will fail; must be fixed\n- `WARNING` - Execution will proceed but with side effects",
-            "enum": [
-                "BLOCKING",
-                "WARNING"
-            ],
-            "type": "string"
-        },
-        "JSONRPCError": {
-            "description": "JSON-RPC error object.",
-            "properties": {
-                "code": {
-                    "description": "The error type that occurred.",
-                    "type": "integer"
-                },
-                "data": {
-                    "description": "Additional information about the error."
-                },
-                "message": {
-                    "description": "A short description of the error. The message SHOULD be limited to a concise single sentence.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "code",
-                "message"
-            ],
-            "type": "object"
-        },
-        "JSONRPCErrorResponse": {
-            "description": "A response to a request that indicates an error occurred.",
-            "properties": {
-                "error": {
-                    "$ref": "#/$defs/JSONRPCError"
-                },
-                "id": {
-                    "description": "A uniquely identifying ID for a request in JSON-RPC.",
-                    "type": [
-                        "string",
-                        "integer"
-                    ]
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "error",
-                "jsonrpc"
-            ],
-            "type": "object"
-        },
-        "JSONRPCMessage": {
-            "anyOf": [
-                {
-                    "$ref": "#/$defs/JSONRPCRequest"
-                },
-                {
-                    "$ref": "#/$defs/JSONRPCResultResponse"
-                },
-                {
-                    "$ref": "#/$defs/JSONRPCErrorResponse"
-                }
-            ],
-            "description": "Refers to any valid JSON-RPC object that can be decoded off the wire, or encoded to be sent."
-        },
-        "JSONRPCRequest": {
-            "description": "A request that expects a response.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "params": {
-                    "additionalProperties": {},
-                    "type": "object"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method"
-            ],
-            "type": "object"
-        },
-        "JSONRPCResponse": {
-            "anyOf": [
-                {
-                    "$ref": "#/$defs/JSONRPCResultResponse"
-                },
-                {
-                    "$ref": "#/$defs/JSONRPCErrorResponse"
-                }
-            ],
-            "description": "A response to a request, containing either the result or error."
-        },
-        "JSONRPCResultResponse": {
-            "description": "A successful (non-error) response to a request.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "result": {
-                    "$ref": "#/$defs/Result"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "result"
-            ],
-            "type": "object"
-        },
-        "LogicOperator": {
-            "description": "Logic operators supported for predicate expressions.",
-            "enum": [
-                "AND",
-                "NOT",
-                "OR"
-            ],
-            "type": "string"
-        },
-        "LookupIntent": {
-            "description": "Intent for retrieving a single entity by its unique identifier.",
-            "properties": {
-                "intentClass": {
-                    "const": "LOOKUP",
-                    "type": "string"
-                },
-                "key": {
-                    "$ref": "#/$defs/IdentityPredicate",
-                    "description": "The identity predicate specifying the unique key to lookup.\nThis should uniquely identify a single entity (e.g., primary key lookup).\nOnly the EQ operator is allowed for identity lookups."
-                },
-                "projections": {
-                    "description": "Fields to project.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "intentClass",
-                "key"
-            ],
-            "type": "object"
-        },
-        "MutableCapability": {
-            "description": "Definition of a mutable field capability (for WRITE operations).",
-            "properties": {
-                "constraints": {
-                    "$ref": "#/$defs/Record<string,unknown>",
-                    "description": "Constraints on the mutation."
-                },
-                "fieldId": {
-                    "description": "The field that can be mutated.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "fieldId"
-            ],
-            "type": "object"
-        },
-        "PaginatedRequestParams": {
-            "description": "Common parameters for paginated requests.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "cursor": {
-                    "description": "An opaque token representing the current pagination position.",
-                    "type": "string"
-                }
-            },
-            "type": "object"
-        },
-        "PaginatedResult": {
-            "description": "Common result type for paginated responses.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "nextCursor": {
-                    "description": "An opaque token representing the pagination position after the last returned result.",
-                    "type": "string"
-                }
-            },
-            "type": "object"
-        },
-        "PingRequest": {
-            "description": "A ping, issued by either the server or the client, to check that the other party is still alive.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.ping",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/RequestParams",
-                    "description": "Common params for any request."
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method"
-            ],
-            "type": "object"
-        },
-        "Predicate": {
-            "description": "A single predicate in an Intent IR.",
-            "properties": {
-                "fieldId": {
-                    "description": "The field identifier to filter on.",
-                    "type": "string"
-                },
-                "op": {
-                    "$ref": "#/$defs/PredicateOperator",
-                    "description": "The comparison operator."
-                },
-                "value": {
-                    "anyOf": [
-                        {
-                            "$ref": "#/$defs/SimilarValue"
-                        },
-                        {
-                            "items": {
-                                "type": [
-                                    "string",
-                                    "integer",
-                                    "boolean"
-                                ]
-                            },
-                            "type": "array"
-                        },
-                        {
-                            "type": [
-                                "string",
-                                "integer",
-                                "boolean"
-                            ]
-                        }
-                    ],
-                    "description": "The value to compare against.\nFor SIMILAR operator, this should be a SimilarValue object.\nFor other operators, this can be a primitive value or array of primitives."
-                }
-            },
-            "required": [
-                "fieldId",
-                "op",
-                "value"
-            ],
-            "type": "object"
-        },
-        "PredicateCapability": {
-            "description": "Definition of a predicate capability for a field.",
-            "properties": {
-                "fieldId": {
-                    "description": "The field this predicate applies to.",
-                    "type": "string"
-                },
-                "operators": {
-                    "description": "Allowed operators for this predicate.",
-                    "items": {
-                        "$ref": "#/$defs/PredicateOperator"
-                    },
-                    "type": "array"
-                },
-                "usage": {
-                    "$ref": "#/$defs/PredicateUsage",
-                    "description": "Whether this predicate is required or optional."
-                }
-            },
-            "required": [
-                "fieldId",
-                "operators",
-                "usage"
-            ],
-            "type": "object"
-        },
-        "PredicateGroup": {
-            "description": "A group of predicates with a logic operator.",
-            "properties": {
-                "op": {
-                    "$ref": "#/$defs/LogicOperator",
-                    "description": "The logic operator to use."
-                },
-                "predicates": {
-                    "description": "The predicates to use.\n\nNote: For the \"NOT\" operator, callers are expected by convention to supply\nexactly one predicate or predicate group, but this is not enforced by the\ntype system and multiple predicates are still allowed here.",
-                    "items": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/$defs/Predicate"
-                            },
-                            {
-                                "$ref": "#/$defs/PredicateGroup"
-                            }
-                        ]
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "op",
-                "predicates"
-            ],
-            "type": "object"
-        },
-        "PredicateOperator": {
-            "description": "Operators supported for predicate expressions.",
-            "enum": [
-                "CONTAINS",
-                "EQ",
-                "GT",
-                "GTE",
-                "ILIKE",
-                "IN",
-                "LIKE",
-                "LT",
-                "LTE",
-                "NEQ",
-                "SIMILAR"
-            ],
-            "type": "string"
-        },
-        "PredicateUsage": {
-            "description": "Predicate usage requirement.",
-            "enum": [
-                "OPTIONAL",
-                "REQUIRED"
-            ],
-            "type": "string"
-        },
-        "ProgressToken": {
-            "description": "A progress token, used to associate progress notifications with the original request.",
-            "type": [
-                "string",
-                "integer"
-            ]
-        },
-        "ProjectionCapability": {
-            "description": "Definition of a projection capability.",
-            "properties": {
-                "fieldId": {
-                    "description": "The field that can be projected.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "fieldId"
-            ],
-            "type": "object"
-        },
-        "QueryIntent": {
-            "description": "Intent for retrieving a set of entities based on criteria.",
-            "properties": {
-                "intentClass": {
-                    "const": "QUERY",
-                    "type": "string"
-                },
-                "limit": {
-                    "description": "The maximum number of results to return.",
-                    "type": "integer"
-                },
-                "orderBy": {
-                    "description": "Fields to order results by.",
-                    "items": {
-                        "$ref": "#/$defs/SortOrder"
-                    },
-                    "type": "array"
-                },
-                "predicates": {
-                    "$ref": "#/$defs/PredicateGroup",
-                    "description": "Predicates for filtering data."
-                },
-                "projections": {
-                    "description": "Fields to project.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "intentClass",
-                "predicates"
-            ],
-            "type": "object"
-        },
-        "Record<string,unknown>": {
-            "type": "object"
-        },
-        "Request": {
-            "properties": {
-                "method": {
-                    "type": "string"
-                },
-                "params": {
-                    "additionalProperties": {},
-                    "type": "object"
-                }
-            },
-            "required": [
-                "method"
-            ],
-            "type": "object"
-        },
-        "RequestId": {
-            "description": "A uniquely identifying ID for a request in JSON-RPC.",
-            "type": [
-                "string",
-                "integer"
-            ]
-        },
-        "RequestParams": {
-            "additionalProperties": {},
-            "description": "Common params for any request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                }
-            },
-            "type": "object"
-        },
-        "Resource": {
-            "description": "Base resource information shared between protocol responses and curation manifests.",
-            "properties": {
-                "description": {
-                    "description": "A brief description of the resource.",
-                    "type": "string"
-                },
-                "intentClasses": {
-                    "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
-                    "items": {
-                        "$ref": "#/$defs/IntentClass"
-                    },
-                    "type": "array"
-                },
-                "resourceId": {
-                    "description": "The unique domain-qualified identifier for this resource.",
-                    "type": "string"
-                },
-                "semanticDescription": {
-                    "description": "A detailed semantic description of the resource.",
-                    "type": "string"
-                },
-                "tags": {
-                    "description": "Tags for categorization and filtering.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                },
-                "version": {
-                    "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "intentClasses",
-                "resourceId",
-                "version"
-            ],
-            "type": "object"
-        },
-        "ResourceId": {
-            "description": "A domain-qualified entity identifier using the format `domain:alias`.\nThe domain prefix acts as a namespace to prevent collisions.",
-            "type": "string"
-        },
-        "Result": {
-            "additionalProperties": {},
-            "description": "Common result type for all successful responses.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                }
-            },
-            "type": "object"
-        },
-        "ReviseIntent": {
-            "description": "Intent for updating existing data.",
-            "properties": {
-                "intentClass": {
-                    "const": "REVISE",
-                    "type": "string"
-                },
-                "payload": {
-                    "$ref": "#/$defs/Record<string,unknown>",
-                    "description": "The data payload containing the fields to update."
-                },
-                "predicates": {
-                    "$ref": "#/$defs/PredicateGroup",
-                    "description": "Predicates to identify the records to update."
-                }
-            },
-            "required": [
-                "intentClass",
-                "payload",
-                "predicates"
-            ],
-            "type": "object"
-        },
-        "ServerCapabilities": {
-            "description": "Capabilities that a server may support.",
-            "properties": {
-                "experimental": {
-                    "additionalProperties": {
-                        "additionalProperties": true,
-                        "properties": {},
-                        "type": "object"
-                    },
-                    "description": "Experimental, non-standard capabilities that the server supports.",
-                    "type": "object"
-                },
-                "supportedIntentClasses": {
-                    "description": "Supported intent classes by this server.",
-                    "items": {
-                        "$ref": "#/$defs/IntentClass"
-                    },
-                    "type": "array"
-                }
-            },
-            "type": "object"
-        },
-        "SimilarValue": {
-            "description": "Structured value for SIMILAR operator (vector similarity search).",
-            "properties": {
-                "blob": {
-                    "description": "Binary content as Base64 or URI reference.",
-                    "type": "string"
-                },
-                "distanceFunction": {
-                    "description": "Distance function to use (e.g., \"COSINE\", \"L2\", \"INNER_PRODUCT\").",
-                    "type": "string"
-                },
-                "text": {
-                    "description": "Text content to search for similarity.",
-                    "type": "string"
-                },
-                "threshold": {
-                    "description": "Similarity threshold (0.0 to 1.0).",
-                    "type": "integer"
-                },
-                "top": {
-                    "description": "Maximum number of results to return.",
-                    "type": "integer"
-                }
-            },
-            "type": "object"
-        },
-        "SortOrder": {
-            "description": "Sort order for a field.",
-            "properties": {
-                "direction": {
-                    "description": "The direction of the sort order.",
-                    "enum": [
-                        "ASC",
-                        "DESC"
-                    ],
-                    "type": "string"
-                },
-                "fieldId": {
-                    "description": "The field to sort by.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "direction",
-                "fieldId"
-            ],
-            "type": "object"
-        },
-        "TraceId": {
-            "description": "A unique identifier for tracing and debugging purposes.\nUsed to correlate requests, responses, and error messages.",
-            "type": "string"
-        },
-        "UsageContract": {
-            "description": "The usage contract returned by DESCRIBE.",
-            "properties": {
-                "capabilities": {
-                    "$ref": "#/$defs/Capabilities",
-                    "description": "Capabilities available for this resource and intent."
-                },
-                "fields": {
-                    "description": "Field definitions for this resource.",
-                    "items": {
-                        "$ref": "#/$defs/Field"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "capabilities",
-                "fields"
-            ],
-            "type": "object"
-        },
-        "ValidateRequest": {
-            "description": "Request to validate an Intent IR before execution.",
-            "properties": {
-                "id": {
-                    "$ref": "#/$defs/RequestId"
-                },
-                "jsonrpc": {
-                    "const": "2.0",
-                    "type": "string"
-                },
-                "method": {
-                    "const": "adp.validate",
-                    "type": "string"
-                },
-                "params": {
-                    "$ref": "#/$defs/ValidateRequestParams"
-                }
-            },
-            "required": [
-                "id",
-                "jsonrpc",
-                "method",
-                "params"
-            ],
-            "type": "object"
-        },
-        "ValidateRequestParams": {
-            "description": "Parameters for the `adp.validate` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "properties": {
-                        "progressToken": {
-                            "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
-                            "type": [
-                                "string",
-                                "integer"
-                            ]
-                        }
-                    },
-                    "type": "object"
-                },
-                "intent": {
-                    "$ref": "#/$defs/Intent",
-                    "description": "The Intent to validate."
-                },
-                "resourceId": {
-                    "description": "The resource to validate against.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "intent",
-                "resourceId"
-            ],
-            "type": "object"
-        },
-        "ValidateResult": {
-            "description": "Result of the `adp.validate` request.",
-            "properties": {
-                "_meta": {
-                    "additionalProperties": {},
-                    "description": "See [General fields] for notes on `_meta` usage.",
-                    "type": "object"
-                },
-                "issues": {
-                    "description": "List of validation issues, if any.",
-                    "items": {
-                        "$ref": "#/$defs/ValidationIssue"
-                    },
-                    "type": "array"
-                },
-                "valid": {
-                    "description": "Whether the Intent IR is valid.",
-                    "type": "boolean"
-                }
-            },
-            "required": [
-                "valid"
-            ],
-            "type": "object"
-        },
-        "ValidationIssue": {
-            "description": "A single validation issue.",
-            "properties": {
-                "code": {
-                    "$ref": "#/$defs/ValidationIssueCode",
-                    "description": "The type of validation issue."
-                },
-                "correctionHint": {
-                    "description": "Correction hint for the Agent.",
-                    "type": "string"
-                },
-                "field": {
-                    "description": "The field associated with this issue.",
-                    "type": "string"
-                },
-                "message": {
-                    "description": "Human-readable message describing the issue.",
-                    "type": "string"
-                },
-                "severity": {
-                    "$ref": "#/$defs/IssueSeverity",
-                    "description": "Severity of this issue."
-                }
-            },
-            "required": [
-                "code",
-                "message",
-                "severity"
-            ],
-            "type": "object"
-        },
-        "ValidationIssueCode": {
-            "description": "Validation issue codes.",
-            "enum": [
-                "CARDINALITY_EXCEEDED",
-                "FIELD_NOT_FOUND",
-                "FIELD_NOT_PERMITTED",
-                "INVALID_FORMAT",
-                "INVALID_OPERATOR",
-                "INVALID_VALUE",
-                "MISSING_REQUIRED_PREDICATE"
-            ],
-            "type": "string"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Capabilities": {
+      "description": "Capabilities available for a resource.",
+      "properties": {
+        "mutables": {
+          "description": "Available mutable field capabilities (for WRITE operations).",
+          "items": {
+            "$ref": "#/$defs/MutableCapability"
+          },
+          "type": "array"
+        },
+        "predicates": {
+          "description": "Available predicate capabilities.",
+          "items": {
+            "$ref": "#/$defs/PredicateCapability"
+          },
+          "type": "array"
+        },
+        "projections": {
+          "description": "Available projection capabilities.",
+          "items": {
+            "$ref": "#/$defs/ProjectionCapability"
+          },
+          "type": "array"
         }
+      },
+      "type": "object"
+    },
+    "ClientCapabilities": {
+      "description": "Capabilities a client may support.",
+      "properties": {
+        "experimental": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "properties": {},
+            "type": "object"
+          },
+          "description": "Experimental, non-standard capabilities that the client supports.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "ConsistencyLevel": {
+      "description": "Data consistency levels for execution results.",
+      "enum": [
+        "EVENTUAL",
+        "STRONG"
+      ],
+      "type": "string"
+    },
+    "Cursor": {
+      "description": "An opaque token used to represent a cursor for pagination.",
+      "type": "string"
+    },
+    "DescribeRequest": {
+      "description": "Request to get the usage contract for a resource.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.describe",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/DescribeRequestParams"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "type": "object"
+    },
+    "DescribeRequestParams": {
+      "description": "Parameters for the `adp.describe` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "cursor": {
+          "description": "An opaque token representing the current pagination position.",
+          "type": "string"
+        },
+        "intentClass": {
+          "$ref": "#/$defs/IntentClass",
+          "description": "The intent class the Agent plans to use."
+        },
+        "resourceId": {
+          "description": "The unique identifier of the resource to describe.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the resource to describe.\n\n**Multi-version support**: If omitted, the server returns the latest version\nof the resource. If specified, the server returns the usage contract for\nthat specific version. Version numbers start from 1.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "intentClass",
+        "resourceId"
+      ],
+      "type": "object"
+    },
+    "DescribeResult": {
+      "description": "Result of the `adp.describe` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "intentClass": {
+          "$ref": "#/$defs/IntentClass",
+          "description": "The intent class this contract applies to."
+        },
+        "nextCursor": {
+          "description": "An opaque token representing the pagination position after the last returned result.",
+          "type": "string"
+        },
+        "resourceId": {
+          "description": "The resource's full qualified identifier.",
+          "type": "string"
+        },
+        "usageContract": {
+          "$ref": "#/$defs/UsageContract",
+          "description": "The usage contract for this resource and intent."
+        },
+        "version": {
+          "description": "The version of the resource schema that was returned.\nThis is the specific version that was requested (if specified in the request)\nor the latest version (if version was omitted in the request).",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "intentClass",
+        "resourceId",
+        "usageContract",
+        "version"
+      ],
+      "type": "object"
+    },
+    "DiscoverFilter": {
+      "description": "Filter criteria for the DISCOVER operation.",
+      "properties": {
+        "domainPrefix": {
+          "description": "Filter resources by domain prefix.",
+          "type": "string"
+        },
+        "intentClass": {
+          "description": "Filter resources by intent class.",
+          "enum": [
+            "*",
+            "INGEST",
+            "LOOKUP",
+            "QUERY",
+            "REVISE"
+          ],
+          "type": "string"
+        },
+        "keyword": {
+          "description": "Filter resources by keyword search.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "DiscoverRequest": {
+      "description": "Request to browse available resources.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.discover",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/DiscoverRequestParams",
+          "description": "Parameters for the `adp.discover` request."
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method"
+      ],
+      "type": "object"
+    },
+    "DiscoverRequestParams": {
+      "description": "Parameters for the `adp.discover` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "cursor": {
+          "description": "An opaque token representing the current pagination position.",
+          "type": "string"
+        },
+        "filter": {
+          "$ref": "#/$defs/DiscoverFilter",
+          "description": "Optional filters to narrow down the resource list."
+        }
+      },
+      "type": "object"
+    },
+    "DiscoverResult": {
+      "description": "Result of the `adp.discover` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "nextCursor": {
+          "description": "An opaque token representing the pagination position after the last returned result.",
+          "type": "string"
+        },
+        "resources": {
+          "description": "List of discovered resources matching the filter criteria.",
+          "items": {
+            "$ref": "#/$defs/Resource"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "resources"
+      ],
+      "type": "object"
+    },
+    "EmptyResult": {
+      "$ref": "#/$defs/Result",
+      "description": "Common result type for all successful responses."
+    },
+    "ExecuteRequest": {
+      "description": "Request to execute an Intent IR.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.execute",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/ExecuteRequestParams"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "type": "object"
+    },
+    "ExecuteRequestParams": {
+      "description": "Parameters for the `adp.execute` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "cursor": {
+          "description": "An opaque token representing the current pagination position.",
+          "type": "string"
+        },
+        "intent": {
+          "$ref": "#/$defs/Intent",
+          "description": "The Intent to execute."
+        },
+        "resourceId": {
+          "description": "The resource to execute against.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intent",
+        "resourceId"
+      ],
+      "type": "object"
+    },
+    "ExecuteResult": {
+      "description": "Result of the `adp.execute` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "executionMetadata": {
+          "$ref": "#/$defs/ExecutionMetadata",
+          "description": "Additional metadata about the execution."
+        },
+        "nextCursor": {
+          "description": "An opaque token representing the pagination position after the last returned result.",
+          "type": "string"
+        },
+        "results": {
+          "description": "The result data.",
+          "items": {
+            "$ref": "#/$defs/Record<string,unknown>"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "results"
+      ],
+      "type": "object"
+    },
+    "ExecutionMetadata": {
+      "description": "Metadata about execution performance and characteristics.",
+      "properties": {
+        "consistency": {
+          "description": "Data consistency level of the result.",
+          "enum": [
+            "EVENTUAL",
+            "STRONG"
+          ],
+          "type": "string"
+        },
+        "durationMs": {
+          "description": "Time taken to execute the query in milliseconds.",
+          "type": "integer"
+        },
+        "sourceSystem": {
+          "description": "The backend system that served the request.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Field": {
+      "description": "Definition of a single field in a resource.",
+      "properties": {
+        "description": {
+          "description": "Human-readable description of the field.",
+          "type": "string"
+        },
+        "fieldId": {
+          "description": "The field identifier.",
+          "type": "string"
+        },
+        "isMasked": {
+          "default": false,
+          "description": "If true, this field is masked/redacted by policy.",
+          "type": "boolean"
+        },
+        "isSearchable": {
+          "default": false,
+          "description": "If true, this field supports similarity search (hint for SIMILAR operator).",
+          "type": "boolean"
+        },
+        "metadata": {
+          "$ref": "#/$defs/FieldMetadata",
+          "description": "Additional metadata about the field."
+        },
+        "samples": {
+          "description": "Sample values for this field.",
+          "items": {},
+          "type": "array"
+        },
+        "type": {
+          "description": "The data type of this field.",
+          "enum": [
+            "BLOB",
+            "BOOLEAN",
+            "DATE",
+            "FLOAT",
+            "INTEGER",
+            "JSON",
+            "STRING",
+            "TIMESTAMP",
+            "VECTOR"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "type": "object"
+    },
+    "FieldMetadata": {
+      "additionalProperties": {},
+      "description": "Metadata about a field's characteristics.",
+      "properties": {
+        "cardinality": {
+          "description": "Number of unique values in this field.",
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "format": {
+          "description": "Expected format pattern.",
+          "type": "string"
+        },
+        "hint": {
+          "description": "A hint for the Agent about how to use this field.",
+          "type": "string"
+        },
+        "samples": {
+          "description": "Sample values for this field (useful for whitelist validation).",
+          "items": {},
+          "type": "array"
+        },
+        "vector": {
+          "description": "For VECTOR fields, specifies vector dimensions and distance function.",
+          "properties": {
+            "dimensions": {
+              "description": "Number of dimensions in the vector.",
+              "type": "integer"
+            },
+            "distanceFunction": {
+              "description": "Distance function to use for similarity search.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "dimensions"
+          ],
+          "type": "object"
+        },
+        "whitelistOnly": {
+          "description": "If true, only values from provided samples/examples are valid.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "FieldType": {
+      "description": "Supported field data types.",
+      "enum": [
+        "BLOB",
+        "BOOLEAN",
+        "DATE",
+        "FLOAT",
+        "INTEGER",
+        "JSON",
+        "STRING",
+        "TIMESTAMP",
+        "VECTOR"
+      ],
+      "type": "string"
+    },
+    "IdentityPredicate": {
+      "description": "An identity predicate used for unique key lookups.\nOnly allows the EQ operator to ensure exact matching.",
+      "properties": {
+        "fieldId": {
+          "description": "The field identifier to filter on.",
+          "type": "string"
+        },
+        "op": {
+          "const": "EQ",
+          "description": "The comparison operator. Must be EQ for identity lookups.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value to compare against. Should be a single value (not an array).",
+          "type": [
+            "string",
+            "integer",
+            "boolean"
+          ]
+        }
+      },
+      "required": [
+        "fieldId",
+        "op",
+        "value"
+      ],
+      "type": "object"
+    },
+    "Implementation": {
+      "description": "Describes the ADP implementation.",
+      "properties": {
+        "name": {
+          "description": "Name of the implementation.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version of the implementation.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "IngestIntent": {
+      "description": "Intent for creating or appending new data.",
+      "properties": {
+        "intentClass": {
+          "const": "INGEST",
+          "type": "string"
+        },
+        "payload": {
+          "description": "The data payload to ingest.\nAn array of records (key-value maps).",
+          "items": {
+            "$ref": "#/$defs/Record<string,unknown>"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "intentClass",
+        "payload"
+      ],
+      "type": "object"
+    },
+    "InitializeRequest": {
+      "description": "This request is sent from the client to the server when it first connects.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.initialize",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/InitializeRequestParams"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "type": "object"
+    },
+    "InitializeRequestParams": {
+      "description": "Parameters for an `adp.initialize` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/ClientCapabilities",
+          "description": "Client capabilities."
+        },
+        "clientInfo": {
+          "$ref": "#/$defs/Implementation",
+          "description": "Information about the client implementation."
+        },
+        "protocolVersion": {
+          "description": "The latest version of the ADP protocol that the client supports.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capabilities",
+        "clientInfo",
+        "protocolVersion"
+      ],
+      "type": "object"
+    },
+    "InitializeResult": {
+      "description": "After receiving an initialize request from the client, the server sends this response.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/ServerCapabilities",
+          "description": "Server capabilities."
+        },
+        "instructions": {
+          "description": "Instructions describing how to use the server and its features.",
+          "type": "string"
+        },
+        "protocolVersion": {
+          "description": "The version of the ADP protocol that the server wants to use.",
+          "type": "string"
+        },
+        "serverInfo": {
+          "$ref": "#/$defs/Implementation",
+          "description": "Information about the server implementation."
+        }
+      },
+      "required": [
+        "capabilities",
+        "protocolVersion",
+        "serverInfo"
+      ],
+      "type": "object"
+    },
+    "Intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LookupIntent"
+        },
+        {
+          "$ref": "#/$defs/QueryIntent"
+        },
+        {
+          "$ref": "#/$defs/IngestIntent"
+        },
+        {
+          "$ref": "#/$defs/ReviseIntent"
+        }
+      ],
+      "description": "The Intent structure used in VALIDATE and EXECUTE operations."
+    },
+    "IntentClass": {
+      "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
+      "enum": [
+        "*",
+        "INGEST",
+        "LOOKUP",
+        "QUERY",
+        "REVISE"
+      ],
+      "type": "string"
+    },
+    "IssueSeverity": {
+      "description": "Severity levels for validation issues.\n\n- `BLOCKING` - Execution will fail; must be fixed\n- `WARNING` - Execution will proceed but with side effects",
+      "enum": [
+        "BLOCKING",
+        "WARNING"
+      ],
+      "type": "string"
+    },
+    "JSONRPCError": {
+      "description": "JSON-RPC error object.",
+      "properties": {
+        "code": {
+          "description": "The error type that occurred.",
+          "type": "integer"
+        },
+        "data": {
+          "description": "Additional information about the error."
+        },
+        "message": {
+          "description": "A short description of the error. The message SHOULD be limited to a concise single sentence.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "JSONRPCErrorResponse": {
+      "description": "A response to a request that indicates an error occurred.",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/JSONRPCError"
+        },
+        "id": {
+          "description": "A uniquely identifying ID for a request in JSON-RPC.",
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "jsonrpc"
+      ],
+      "type": "object"
+    },
+    "JSONRPCMessage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JSONRPCRequest"
+        },
+        {
+          "$ref": "#/$defs/JSONRPCResultResponse"
+        },
+        {
+          "$ref": "#/$defs/JSONRPCErrorResponse"
+        }
+      ],
+      "description": "Refers to any valid JSON-RPC object that can be decoded off the wire, or encoded to be sent."
+    },
+    "JSONRPCRequest": {
+      "description": "A request that expects a response.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method"
+      ],
+      "type": "object"
+    },
+    "JSONRPCResponse": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JSONRPCResultResponse"
+        },
+        {
+          "$ref": "#/$defs/JSONRPCErrorResponse"
+        }
+      ],
+      "description": "A response to a request, containing either the result or error."
+    },
+    "JSONRPCResultResponse": {
+      "description": "A successful (non-error) response to a request.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/Result"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "result"
+      ],
+      "type": "object"
+    },
+    "LogicOperator": {
+      "description": "Logic operators supported for predicate expressions.",
+      "enum": [
+        "AND",
+        "NOT",
+        "OR"
+      ],
+      "type": "string"
+    },
+    "LookupIntent": {
+      "description": "Intent for retrieving a single entity by its unique identifier.",
+      "properties": {
+        "intentClass": {
+          "const": "LOOKUP",
+          "type": "string"
+        },
+        "key": {
+          "$ref": "#/$defs/IdentityPredicate",
+          "description": "The identity predicate specifying the unique key to lookup.\nThis should uniquely identify a single entity (e.g., primary key lookup).\nOnly the EQ operator is allowed for identity lookups."
+        },
+        "projections": {
+          "description": "Fields to project.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "intentClass",
+        "key"
+      ],
+      "type": "object"
+    },
+    "MutableCapability": {
+      "description": "Definition of a mutable field capability (for WRITE operations).",
+      "properties": {
+        "constraints": {
+          "$ref": "#/$defs/Record<string,unknown>",
+          "description": "Constraints on the mutation."
+        },
+        "fieldId": {
+          "description": "The field that can be mutated.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "type": "object"
+    },
+    "PaginatedRequestParams": {
+      "description": "Common parameters for paginated requests.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "cursor": {
+          "description": "An opaque token representing the current pagination position.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PaginatedResult": {
+      "description": "Common result type for paginated responses.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "nextCursor": {
+          "description": "An opaque token representing the pagination position after the last returned result.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PingRequest": {
+      "description": "A ping, issued by either the server or the client, to check that the other party is still alive.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.ping",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/RequestParams",
+          "description": "Common params for any request."
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method"
+      ],
+      "type": "object"
+    },
+    "Predicate": {
+      "description": "A single predicate in an Intent IR.",
+      "properties": {
+        "fieldId": {
+          "description": "The field identifier to filter on.",
+          "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/PredicateOperator",
+          "description": "The comparison operator."
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SimilarValue"
+            },
+            {
+              "items": {
+                "type": [
+                  "string",
+                  "integer",
+                  "boolean"
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            }
+          ],
+          "description": "The value to compare against.\nFor SIMILAR operator, this should be a SimilarValue object.\nFor other operators, this can be a primitive value or array of primitives."
+        }
+      },
+      "required": [
+        "fieldId",
+        "op",
+        "value"
+      ],
+      "type": "object"
+    },
+    "PredicateCapability": {
+      "description": "Definition of a predicate capability for a field.",
+      "properties": {
+        "fieldId": {
+          "description": "The field this predicate applies to.",
+          "type": "string"
+        },
+        "operators": {
+          "description": "Allowed operators for this predicate.",
+          "items": {
+            "$ref": "#/$defs/PredicateOperator"
+          },
+          "type": "array"
+        },
+        "usage": {
+          "$ref": "#/$defs/PredicateUsage",
+          "description": "Whether this predicate is required or optional."
+        }
+      },
+      "required": [
+        "fieldId",
+        "operators",
+        "usage"
+      ],
+      "type": "object"
+    },
+    "PredicateGroup": {
+      "description": "A group of predicates with a logic operator.",
+      "properties": {
+        "op": {
+          "$ref": "#/$defs/LogicOperator",
+          "description": "The logic operator to use."
+        },
+        "predicates": {
+          "description": "The predicates to use.\n\nNote: For the \"NOT\" operator, callers are expected by convention to supply\nexactly one predicate or predicate group, but this is not enforced by the\ntype system and multiple predicates are still allowed here.",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Predicate"
+              },
+              {
+                "$ref": "#/$defs/PredicateGroup"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "op",
+        "predicates"
+      ],
+      "type": "object"
+    },
+    "PredicateOperator": {
+      "description": "Operators supported for predicate expressions.",
+      "enum": [
+        "CONTAINS",
+        "EQ",
+        "GT",
+        "GTE",
+        "ILIKE",
+        "IN",
+        "LIKE",
+        "LT",
+        "LTE",
+        "NEQ",
+        "SIMILAR"
+      ],
+      "type": "string"
+    },
+    "PredicateUsage": {
+      "description": "Predicate usage requirement.",
+      "enum": [
+        "OPTIONAL",
+        "REQUIRED"
+      ],
+      "type": "string"
+    },
+    "ProgressToken": {
+      "description": "A progress token, used to associate progress notifications with the original request.",
+      "type": [
+        "string",
+        "integer"
+      ]
+    },
+    "ProjectionCapability": {
+      "description": "Definition of a projection capability.",
+      "properties": {
+        "fieldId": {
+          "description": "The field that can be projected.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "type": "object"
+    },
+    "QueryIntent": {
+      "description": "Intent for retrieving a set of entities based on criteria.",
+      "properties": {
+        "intentClass": {
+          "const": "QUERY",
+          "type": "string"
+        },
+        "limit": {
+          "description": "The maximum number of results to return.",
+          "type": "integer"
+        },
+        "orderBy": {
+          "description": "Fields to order results by.",
+          "items": {
+            "$ref": "#/$defs/SortOrder"
+          },
+          "type": "array"
+        },
+        "predicates": {
+          "$ref": "#/$defs/PredicateGroup",
+          "description": "Predicates for filtering data."
+        },
+        "projections": {
+          "description": "Fields to project.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "intentClass",
+        "predicates"
+      ],
+      "type": "object"
+    },
+    "Record<string,unknown>": {
+      "type": "object"
+    },
+    "Request": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "type": "object"
+    },
+    "RequestId": {
+      "description": "A uniquely identifying ID for a request in JSON-RPC.",
+      "type": [
+        "string",
+        "integer"
+      ]
+    },
+    "RequestParams": {
+      "additionalProperties": {},
+      "description": "Common params for any request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "Resource": {
+      "description": "Base resource information shared between protocol responses and curation manifests.",
+      "properties": {
+        "description": {
+          "description": "A brief description of the resource.",
+          "type": "string"
+        },
+        "intentClasses": {
+          "description": "The intent classes this resource supports.\n\n**Wildcard Support**: To accept any intent class, you can:\n- Explicitly specify `[\"*\"]` (explicit wildcard)\n\nWhen `\"*\"` is included in the array, the resource accepts all intent classes\n(QUERY, LOOKUP, INGEST, REVISE). If `\"*\"` is included with other\nintent classes, the wildcard takes precedence.\n\n**Empty Array**: If set to an empty array `[]`, no intent classes are accepted.\nThe resource will reject all requests regardless of intent class. This effectively\ndisables the resource.",
+          "items": {
+            "$ref": "#/$defs/IntentClass"
+          },
+          "type": "array"
+        },
+        "resourceId": {
+          "description": "The unique domain-qualified identifier for this resource.",
+          "type": "string"
+        },
+        "semanticDescription": {
+          "description": "A detailed semantic description of the resource.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags for categorization and filtering.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "description": "The version number of this resource's schema.\n\n**Multi-version support**: A resource can have multiple versions (1, 2, 3, ...).\nVersion numbers start from 1. When describing a resource, the client may\nrequest a specific version; if not specified, the server returns the latest\nversion.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "intentClasses",
+        "resourceId",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ResourceId": {
+      "description": "A domain-qualified entity identifier using the format `domain:alias`.\nThe domain prefix acts as a namespace to prevent collisions.",
+      "type": "string"
+    },
+    "Result": {
+      "additionalProperties": {},
+      "description": "Common result type for all successful responses.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "ReviseIntent": {
+      "description": "Intent for updating existing data.",
+      "properties": {
+        "intentClass": {
+          "const": "REVISE",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/Record<string,unknown>",
+          "description": "The data payload containing the fields to update."
+        },
+        "predicates": {
+          "$ref": "#/$defs/PredicateGroup",
+          "description": "Predicates to identify the records to update."
+        }
+      },
+      "required": [
+        "intentClass",
+        "payload",
+        "predicates"
+      ],
+      "type": "object"
+    },
+    "ServerCapabilities": {
+      "description": "Capabilities that a server may support.",
+      "properties": {
+        "experimental": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "properties": {},
+            "type": "object"
+          },
+          "description": "Experimental, non-standard capabilities that the server supports.",
+          "type": "object"
+        },
+        "supportedIntentClasses": {
+          "description": "Supported intent classes by this server.",
+          "items": {
+            "$ref": "#/$defs/IntentClass"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "SimilarValue": {
+      "description": "Structured value for SIMILAR operator (vector similarity search).",
+      "properties": {
+        "blob": {
+          "description": "Binary content as Base64 or URI reference.",
+          "type": "string"
+        },
+        "distanceFunction": {
+          "description": "Distance function to use (e.g., \"COSINE\", \"L2\", \"INNER_PRODUCT\").",
+          "type": "string"
+        },
+        "text": {
+          "description": "Text content to search for similarity.",
+          "type": "string"
+        },
+        "threshold": {
+          "description": "Similarity threshold (0.0 to 1.0).",
+          "type": "integer"
+        },
+        "top": {
+          "description": "Maximum number of results to return.",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "SortOrder": {
+      "description": "Sort order for a field.",
+      "properties": {
+        "direction": {
+          "description": "The direction of the sort order.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "type": "string"
+        },
+        "fieldId": {
+          "description": "The field to sort by.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direction",
+        "fieldId"
+      ],
+      "type": "object"
+    },
+    "TraceId": {
+      "description": "A unique identifier for tracing and debugging purposes.\nUsed to correlate requests, responses, and error messages.",
+      "type": "string"
+    },
+    "UsageContract": {
+      "description": "The usage contract returned by DESCRIBE.",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities",
+          "description": "Capabilities available for this resource and intent."
+        },
+        "fields": {
+          "description": "Field definitions for this resource.",
+          "items": {
+            "$ref": "#/$defs/Field"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "capabilities",
+        "fields"
+      ],
+      "type": "object"
+    },
+    "ValidateRequest": {
+      "description": "Request to validate an Intent IR before execution.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "jsonrpc": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "method": {
+          "const": "adp.validate",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/ValidateRequestParams"
+        }
+      },
+      "required": [
+        "id",
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "type": "object"
+    },
+    "ValidateRequestParams": {
+      "description": "Parameters for the `adp.validate` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "properties": {
+            "progressToken": {
+              "description": "If specified, the caller is requesting out-of-band progress notifications\nfor this request. The value of this parameter is an opaque token that will\nbe attached to any subsequent notifications.",
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "intent": {
+          "$ref": "#/$defs/Intent",
+          "description": "The Intent to validate."
+        },
+        "resourceId": {
+          "description": "The resource to validate against.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intent",
+        "resourceId"
+      ],
+      "type": "object"
+    },
+    "ValidateResult": {
+      "description": "Result of the `adp.validate` request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": {},
+          "description": "See [General fields] for notes on `_meta` usage.",
+          "type": "object"
+        },
+        "issues": {
+          "description": "List of validation issues, if any.",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          },
+          "type": "array"
+        },
+        "valid": {
+          "description": "Whether the Intent IR is valid.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid"
+      ],
+      "type": "object"
+    },
+    "ValidationIssue": {
+      "description": "A single validation issue.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ValidationIssueCode",
+          "description": "The type of validation issue."
+        },
+        "correctionHint": {
+          "description": "Correction hint for the Agent.",
+          "type": "string"
+        },
+        "field": {
+          "description": "The field associated with this issue.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable message describing the issue.",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/IssueSeverity",
+          "description": "Severity of this issue."
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "ValidationIssueCode": {
+      "description": "Validation issue codes.",
+      "enum": [
+        "CARDINALITY_EXCEEDED",
+        "FIELD_NOT_FOUND",
+        "FIELD_NOT_PERMITTED",
+        "INVALID_FORMAT",
+        "INVALID_OPERATOR",
+        "INVALID_VALUE",
+        "MISSING_REQUIRED_PREDICATE"
+      ],
+      "type": "string"
     }
+  }
 }
-
