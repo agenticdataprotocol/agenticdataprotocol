@@ -131,7 +131,7 @@ async function generateTypeSchema(
       throw error;
     }
 
-    // Apply transformations (2020-12 rewrite, tuple fix, spec constraints)
+    // Apply transformations (2020-12 rewrite and tuple fix)
     applyJsonSchema202012Transformations(outputPath);
 
     console.log(`  ✓ Generated schema for ${typeName}`);

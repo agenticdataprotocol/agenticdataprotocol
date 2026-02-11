@@ -346,9 +346,6 @@ export interface CuratedResource extends Resource {
 /**
  * Intent class support for CuratedResource.
  *
- * **Default Behavior**: If `intentClasses` is omitted, it defaults to `["*"]` (wildcard),
- * which accepts any intent class (QUERY, LOOKUP, INGEST, REVISE).
- *
  * **Wildcard Intent Class**: The resource can accept any intent class by:
  * 1. Explicitly specifying `["*"]` (explicit wildcard)
  *
