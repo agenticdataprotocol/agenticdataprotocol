@@ -35,6 +35,19 @@ function applyJsonSchema202012Transformations(schemaPath: string): void {
 }
 
 /**
+ * Apply spec-specific constraints to semantic manifest schema.
+ * Adds minItems: 1 to CuratedResource.sources (non-empty array requirement).
+ */
+function applySemanticManifestConstraints(schemaPath: string): void {
+  const schema = JSON.parse(readFileSync(schemaPath, "utf-8"));
+  const curated = schema?.$defs?.CuratedResource;
+  if (curated?.properties?.sources && typeof curated.properties.sources === "object") {
+    curated.properties.sources.minItems = 1;
+  }
+  writeFileSync(schemaPath, JSON.stringify(schema, null, 2) + "\n", "utf-8");
+}
+
+/**
  * Generate JSON schema for a specific type from a TypeScript file
  */
 async function generateTypeSchema(
@@ -63,6 +76,16 @@ async function generateTypeSchema(
       expectedSchema = expectedSchema.replace(/"definitions":/g, '"$defs":');
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
 
+      // Apply spec constraints for SemanticManifest (minItems on sources)
+      if (typeName === "SemanticManifest") {
+        const parsed = JSON.parse(expectedSchema);
+        const curated = parsed?.$defs?.CuratedResource;
+        if (curated?.properties?.sources && typeof curated.properties.sources === "object") {
+          curated.properties.sources.minItems = 1;
+        }
+        expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
+      }
+
       // Compare
       if (existingSchema.trim() !== expectedSchema.trim()) {
         console.error(`  ✗ Schema for ${typeName} is out of date!`);
@@ -88,6 +111,11 @@ async function generateTypeSchema(
 
     // Apply transformations
     applyJsonSchema202012Transformations(outputPath);
+
+    // Apply spec constraints for SemanticManifest
+    if (typeName === "SemanticManifest") {
+      applySemanticManifestConstraints(outputPath);
+    }
 
     console.log(`  ✓ Generated schema for ${typeName}`);
     return true;
