@@ -301,34 +301,30 @@ export interface SourceDefinition {
 
 /**
  * Definition of a resource in the semantic layer.
- * Extends Resource with curation-specific fields for backend binding and source definitions.
+ * Extends Resource with curation-specific fields for backend binding and a single source definition.
  *
- * **Current Limitation**: While `sources` is defined as an array, currently only a single
- * source element is supported. The array structure is preserved for future support of
- * multiple sources per resource. When multiple sources are needed, create separate
- * resources with different resourceIds.
+ * Each curated resource is backed by exactly one `sourceDefinition` within a backend
+ * (table, collection, prefix, etc.) and has its own field definitions.
  *
  * **Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,
  * resources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).
  *
  * @category Curation Semantic Manifest
  * @example
- * // Full manual definition - single source (current supported format)
+ * // Full manual definition - single source
  * {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   "intentClasses": ["QUERY"],
  *   "version": 1,
  *   "description": "Bank failure records",
  *   "backendId": "finance_sql",
- *   "sources": [
- *     {
- *       "source": "v_failures_consolidated",
- *       "fields": [
- *         { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *         { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
- *       ]
- *     }
- *   ]
+ *   "sourceDefinition": {
+ *     "source": "v_failures_consolidated",
+ *     "fields": [
+ *       { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *       { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *     ]
+ *   }
  * }
  */
 export interface CuratedResource extends Resource {
@@ -339,16 +335,12 @@ export interface CuratedResource extends Resource {
   backendId: string;
 
   /**
-   * List of source definitions for this resource.
+   * Source definition for this resource.
    *
-   * **Current Limitation**: Currently only a single source element is supported.
-   * The array structure is preserved for future support of multiple sources per resource.
-   * When multiple sources are needed, create separate resources with different resourceIds.
-   *
-   * Each source represents a specific data source within the backend (table, collection, prefix, etc.)
-   * and has its own field definitions. At least one source MUST be provided for each resource.
+   * Represents the single data source within the backend (table, collection, prefix, etc.)
+   * that backs this resource and defines its fields.
    */
-  sources: [SourceDefinition, ...SourceDefinition[]];
+  sourceDefinition: SourceDefinition;
 }
 
 /**
@@ -358,8 +350,7 @@ export interface CuratedResource extends Resource {
  * which accepts any intent class (QUERY, LOOKUP, INGEST, REVISE).
  *
  * **Wildcard Intent Class**: The resource can accept any intent class by:
- * 1. Omitting `intentClasses` (defaults to `["*"]`)
- * 2. Explicitly specifying `["*"]` (explicit wildcard)
+ * 1. Explicitly specifying `["*"]` (explicit wildcard)
  *
  * When `intentClasses` contains `"*"`, it acts as a wildcard and accepts any intent class.
  * If `"*"` is included with other intent classes (e.g., `["QUERY", "*"]`), the wildcard
@@ -389,15 +380,13 @@ export interface CuratedResource extends Resource {
  *     {
  *       "resourceId": "com.acme.finance:bank_failures",
  *       "backendId": "finance_sql",
- *       "sources": [
- *         {
- *           "source": "v_failures_consolidated",
- *           "fields": [
- *             { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
- *             { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
- *           ]
- *         }
- *       ]
+ *       "sourceDefinition": {
+ *         "source": "v_failures_consolidated",
+ *         "fields": [
+ *           { "fieldId": "bank_id", "type": "STRING", "description": "FDIC Certificate Number" },
+ *           { "fieldId": "closing_date", "type": "DATE", "description": "The date the institution was closed." }
+ *         ]
+ *       }
  *     }
  *   ]
  * }

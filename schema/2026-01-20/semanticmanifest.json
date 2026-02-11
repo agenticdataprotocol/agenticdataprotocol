@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CuratedResource": {
-      "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and source definitions.\n\n**Current Limitation**: While `sources` is defined as an array, currently only a single\nsource element is supported. The array structure is preserved for future support of\nmultiple sources per resource. When multiple sources are needed, create separate\nresources with different resourceIds.\n\n**Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,\nresources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).",
+      "description": "Definition of a resource in the semantic layer.\nExtends Resource with curation-specific fields for backend binding and a single source definition.\n\nEach curated resource is backed by exactly one `sourceDefinition` within a backend\n(table, collection, prefix, etc.) and has its own field definitions.\n\n**Required definition**: To support ADP operations like `adp.discover` and `adp.describe`,\nresources must be explicitly defined in `semantic.yaml` (no auto-discovery bootstrap mode).",
       "properties": {
         "backendId": {
           "description": "Reference to the backend in physical.yaml that provides this resource.\nRequired.",
@@ -27,18 +27,9 @@
           "description": "A detailed semantic description of the resource.",
           "type": "string"
         },
-        "sources": {
-          "additionalItems": {
-            "$ref": "#/$defs/SourceDefinition"
-          },
-          "description": "List of source definitions for this resource.\n\n**Current Limitation**: Currently only a single source element is supported.\nThe array structure is preserved for future support of multiple sources per resource.\nWhen multiple sources are needed, create separate resources with different resourceIds.\n\nEach source represents a specific data source within the backend (table, collection, prefix, etc.)\nand has its own field definitions. At least one source MUST be provided for each resource.",
-          "items": [
-            {
-              "$ref": "#/$defs/SourceDefinition"
-            }
-          ],
-          "minItems": 1,
-          "type": "array"
+        "sourceDefinition": {
+          "$ref": "#/$defs/SourceDefinition",
+          "description": "Source definition for this resource.\n\nRepresents the single data source within the backend (table, collection, prefix, etc.)\nthat backs this resource and defines its fields."
         },
         "tags": {
           "description": "Tags for categorization and filtering.",
@@ -56,7 +47,7 @@
         "backendId",
         "intentClasses",
         "resourceId",
-        "sources",
+        "sourceDefinition",
         "version"
       ],
       "type": "object"

@@ -1,171 +1,170 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$defs": {
-        "MandatoryFilterRule": {
-            "description": "Mandatory filter rule that enforces required predicates.",
-            "properties": {
-                "condition": {
-                    "description": "Optional condition for when this rule applies.",
-                    "type": "string"
-                },
-                "fieldId": {
-                    "description": "Field identifier for the mandatory filter.",
-                    "type": "string"
-                },
-                "op": {
-                    "$ref": "#/$defs/PredicateOperator",
-                    "description": "Operator for the mandatory filter."
-                },
-                "type": {
-                    "const": "MANDATORY_FILTER",
-                    "description": "Type of policy rule.",
-                    "type": "string"
-                },
-                "value": {
-                    "anyOf": [
-                        {
-                            "items": {
-                                "type": [
-                                    "string",
-                                    "integer",
-                                    "boolean"
-                                ]
-                            },
-                            "type": "array"
-                        },
-                        {
-                            "type": [
-                                "string",
-                                "integer",
-                                "boolean"
-                            ]
-                        }
-                    ],
-                    "description": "Value for the mandatory filter."
-                }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "MandatoryFilterRule": {
+      "description": "Mandatory filter rule that enforces required predicates.",
+      "properties": {
+        "condition": {
+          "description": "Optional condition for when this rule applies.",
+          "type": "string"
+        },
+        "fieldId": {
+          "description": "Field identifier for the mandatory filter.",
+          "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/PredicateOperator",
+          "description": "Operator for the mandatory filter."
+        },
+        "type": {
+          "const": "MANDATORY_FILTER",
+          "description": "Type of policy rule.",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "items": {
+                "type": [
+                  "string",
+                  "integer",
+                  "boolean"
+                ]
+              },
+              "type": "array"
             },
-            "required": [
-                "fieldId",
-                "op",
-                "type",
-                "value"
-            ],
-            "type": "object"
-        },
-        "OperationalRule": {
-            "description": "Operational constraints for resource access.",
-            "properties": {
-                "condition": {
-                    "description": "Optional condition for when this rule applies.",
-                    "type": "string"
-                },
-                "defaultOrderBy": {
-                    "$ref": "#/$defs/SortOrder",
-                    "description": "Default sort order to apply to the resource.\nUses structured SortOrder format with fieldId and direction."
-                },
-                "enforceLimit": {
-                    "description": "Maximum number of results to return (enforced limit).",
-                    "type": "integer"
-                },
-                "type": {
-                    "const": "OPERATIONAL",
-                    "description": "Type of policy rule.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "type"
-            ],
-            "type": "object"
-        },
-        "PolicyRule": {
-            "anyOf": [
-                {
-                    "$ref": "#/$defs/MandatoryFilterRule"
-                },
-                {
-                    "$ref": "#/$defs/OperationalRule"
-                }
-            ],
-            "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)"
-        },
-        "PredicateOperator": {
-            "description": "Operators supported for predicate expressions.",
-            "enum": [
-                "CONTAINS",
-                "EQ",
-                "GT",
-                "GTE",
-                "ILIKE",
-                "IN",
-                "LIKE",
-                "LT",
-                "LTE",
-                "NEQ",
-                "SIMILAR"
-            ],
-            "type": "string"
-        },
-        "ResourcePolicy": {
-            "description": "Policy rules for a specific resource.",
-            "properties": {
-                "resourceId": {
-                    "description": "Resource identifier for which these policies apply.",
-                    "type": "string"
-                },
-                "rules": {
-                    "description": "List of policy rules to apply to this resource.\nIf omitted or empty, no special enforcements are applied for this resource.",
-                    "items": {
-                        "$ref": "#/$defs/PolicyRule"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "resourceId"
-            ],
-            "type": "object"
-        },
-        "SortOrder": {
-            "description": "Sort order for a field.",
-            "properties": {
-                "direction": {
-                    "description": "The direction of the sort order.",
-                    "enum": [
-                        "ASC",
-                        "DESC"
-                    ],
-                    "type": "string"
-                },
-                "fieldId": {
-                    "description": "The field to sort by.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "direction",
-                "fieldId"
-            ],
-            "type": "object"
+            {
+              "type": [
+                "string",
+                "integer",
+                "boolean"
+              ]
+            }
+          ],
+          "description": "Value for the mandatory filter."
         }
+      },
+      "required": [
+        "fieldId",
+        "op",
+        "type",
+        "value"
+      ],
+      "type": "object"
     },
-    "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.\nWhen omitted or empty, no special enforcements are applied - resources are accessible\nwithout mandatory filters or operational constraints. This is ideal for\ndevelopment and testing scenarios.",
-    "properties": {
-        "policies": {
-            "description": "List of resource policies.\n\n**Bootstrap behavior**: If omitted or empty, no special enforcements are applied.\nResources are accessible without:\n- Mandatory filters (no required predicates)\n- Operational constraints (no limits, no default sorting)\n\nThis provides unrestricted access, ideal for:\n- Development and testing\n- Quick prototyping\n- Internal tools with trusted access\n\nFor production use, explicitly define policies to enforce security, data governance,\nand access controls.",
-            "items": {
-                "$ref": "#/$defs/ResourcePolicy"
-            },
-            "type": "array"
+    "OperationalRule": {
+      "description": "Operational constraints for resource access.",
+      "properties": {
+        "condition": {
+          "description": "Optional condition for when this rule applies.",
+          "type": "string"
         },
-        "version": {
-            "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
-            "type": "string"
+        "defaultOrderBy": {
+          "$ref": "#/$defs/SortOrder",
+          "description": "Default sort order to apply to the resource.\nUses structured SortOrder format with fieldId and direction."
+        },
+        "enforceLimit": {
+          "description": "Maximum number of results to return (enforced limit).",
+          "type": "integer"
+        },
+        "type": {
+          "const": "OPERATIONAL",
+          "description": "Type of policy rule.",
+          "type": "string"
         }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
     },
-    "required": [
-        "version"
-    ],
-    "type": "object"
+    "PolicyRule": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MandatoryFilterRule"
+        },
+        {
+          "$ref": "#/$defs/OperationalRule"
+        }
+      ],
+      "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)"
+    },
+    "PredicateOperator": {
+      "description": "Operators supported for predicate expressions.",
+      "enum": [
+        "CONTAINS",
+        "EQ",
+        "GT",
+        "GTE",
+        "ILIKE",
+        "IN",
+        "LIKE",
+        "LT",
+        "LTE",
+        "NEQ",
+        "SIMILAR"
+      ],
+      "type": "string"
+    },
+    "ResourcePolicy": {
+      "description": "Policy rules for a specific resource.",
+      "properties": {
+        "resourceId": {
+          "description": "Resource identifier for which these policies apply.",
+          "type": "string"
+        },
+        "rules": {
+          "description": "List of policy rules to apply to this resource.\nIf omitted or empty, no special enforcements are applied for this resource.",
+          "items": {
+            "$ref": "#/$defs/PolicyRule"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "resourceId"
+      ],
+      "type": "object"
+    },
+    "SortOrder": {
+      "description": "Sort order for a field.",
+      "properties": {
+        "direction": {
+          "description": "The direction of the sort order.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "type": "string"
+        },
+        "fieldId": {
+          "description": "The field to sort by.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direction",
+        "fieldId"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.\nWhen omitted or empty, no special enforcements are applied - resources are accessible\nwithout mandatory filters or operational constraints. This is ideal for\ndevelopment and testing scenarios.",
+  "properties": {
+    "policies": {
+      "description": "List of resource policies.\n\n**Bootstrap behavior**: If omitted or empty, no special enforcements are applied.\nResources are accessible without:\n- Mandatory filters (no required predicates)\n- Operational constraints (no limits, no default sorting)\n\nThis provides unrestricted access, ideal for:\n- Development and testing\n- Quick prototyping\n- Internal tools with trusted access\n\nFor production use, explicitly define policies to enforce security, data governance,\nand access controls.",
+      "items": {
+        "$ref": "#/$defs/ResourcePolicy"
+      },
+      "type": "array"
+    },
+    "version": {
+      "description": "Version of the manifest schema.\n**Required.** Used to identify which spec version this manifest follows.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "type": "object"
 }
-

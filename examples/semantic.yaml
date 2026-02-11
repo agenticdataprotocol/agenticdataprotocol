@@ -1,12 +1,6 @@
 # Semantic Manifest Example
-# Maps physical data sources to ADP resources and defines the "Agent's View" of fields
-#
-# IMPORTANT:
-# - `sources` MUST be a non-empty list (at least one source definition per resource).
-# - While `sources` is defined as an array, currently only a single source element is
-#   supported per resource. The array structure is preserved for future support of
-#   multiple sources. When multiple sources are needed, create separate resources
-#   with different resourceIds.
+# Maps physical data sources to ADP resources and defines the "Agent's View" of fields.
+# Each curated resource is backed by exactly one sourceDefinition.
 
 # ============================================================================
 # Full Manual Definition
@@ -14,7 +8,7 @@
 version: "1.0.0"
 
 resources:
-  # RDBMS Resource - Full definition with single source
+  # RDBMS Resource - Full definition with single sourceDefinition
   - resourceId: "com.acme.finance:bank_failures"
     intentClasses: ["QUERY"]
     version: 1  # Resource version number (starts from 1; default 1 if omitted)
@@ -25,34 +19,29 @@ resources:
       - "REGULATORY"
       - "HISTORICAL"
     backendId: "finance_sql"
-    sources:
-      - source: "v_failures_consolidated"
-        fields:
-          - fieldId: "bank_id"
-            type: "STRING"
-            description: "FDIC Certificate Number"
-            isSearchable: false
-          - fieldId: "bank_name"
-            type: "STRING"
-            description: "Name of the failed bank"
-            isSearchable: true
-          - fieldId: "failure_summary"
-            type: "STRING"
-            description: "Long-form narrative of the failure event."
-            isSearchable: true
-          - fieldId: "closing_date"
-            type: "DATE"
-            description: "The date the institution was closed."
-            isSearchable: false
-          - fieldId: "assets"
-            type: "FLOAT"
-            description: "Total assets at time of failure"
-            isSearchable: false
-
-  # Note: Currently only one source per resource is supported.
-  # To combine multiple tables, create separate resources:
-  # - resourceId: "com.acme.finance:bank_failures" with source: "bank_failures"
-  # - resourceId: "com.acme.finance:bank_mergers" with source: "bank_mergers"
+    sourceDefinition:
+      source: "v_failures_consolidated"
+      fields:
+        - fieldId: "bank_id"
+          type: "STRING"
+          description: "FDIC Certificate Number"
+          isSearchable: false
+        - fieldId: "bank_name"
+          type: "STRING"
+          description: "Name of the failed bank"
+          isSearchable: true
+        - fieldId: "failure_summary"
+          type: "STRING"
+          description: "Long-form narrative of the failure event."
+          isSearchable: true
+        - fieldId: "closing_date"
+          type: "DATE"
+          description: "The date the institution was closed."
+          isSearchable: false
+        - fieldId: "assets"
+          type: "FLOAT"
+          description: "Total assets at time of failure"
+          isSearchable: false
 
   # ============================================================================
   # Multi-Version Resource Example
@@ -61,49 +50,49 @@ resources:
   # returns the latest version; adp.describe with version: 1 or version: 2 returns
   # that version's usage contract.
 
-  # Version 1 - original schema (fewer fields)
+  # Version 1 - original schema (fewer fields) - single sourceDefinition
   - resourceId: "com.acme.finance:audit_events"
     version: 1
     intentClasses: ["QUERY"]
     description: "Audit events (v1 - core fields only)"
     backendId: "finance_sql"
-    sources:
-      - source: "audit_events"
-        fields:
-          - fieldId: "event_id"
-            type: "STRING"
-            description: "Unique event identifier"
-          - fieldId: "event_type"
-            type: "STRING"
-            description: "Type of audit event"
-          - fieldId: "created_at"
-            type: "TIMESTAMP"
-            description: "When the event occurred"
+    sourceDefinition:
+      source: "audit_events"
+      fields:
+        - fieldId: "event_id"
+          type: "STRING"
+          description: "Unique event identifier"
+        - fieldId: "event_type"
+          type: "STRING"
+          description: "Type of audit event"
+        - fieldId: "created_at"
+          type: "TIMESTAMP"
+          description: "When the event occurred"
 
-  # Version 2 - extended schema (additional fields)
+  # Version 2 - extended schema (additional fields) - same sourceDefinition
   - resourceId: "com.acme.finance:audit_events"
     version: 2
     intentClasses: ["QUERY"]
     description: "Audit events (v2 - with actor and severity)"
     backendId: "finance_sql"
-    sources:
-      - source: "audit_events"
-        fields:
-          - fieldId: "event_id"
-            type: "STRING"
-            description: "Unique event identifier"
-          - fieldId: "event_type"
-            type: "STRING"
-            description: "Type of audit event"
-          - fieldId: "created_at"
-            type: "TIMESTAMP"
-            description: "When the event occurred"
-          - fieldId: "actor_id"
-            type: "STRING"
-            description: "ID of the user or system that performed the action (v2)"
-          - fieldId: "severity"
-            type: "STRING"
-            description: "Event severity: LOW, MEDIUM, HIGH (v2)"
+    sourceDefinition:
+      source: "audit_events"
+      fields:
+        - fieldId: "event_id"
+          type: "STRING"
+          description: "Unique event identifier"
+        - fieldId: "event_type"
+          type: "STRING"
+          description: "Type of audit event"
+        - fieldId: "created_at"
+          type: "TIMESTAMP"
+          description: "When the event occurred"
+        - fieldId: "actor_id"
+          type: "STRING"
+          description: "ID of the user or system that performed the action (v2)"
+        - fieldId: "severity"
+          type: "STRING"
+          description: "Event severity: LOW, MEDIUM, HIGH (v2)"
 
   # Wildcard Intent Class Example - explicit wildcard using "*"
   - resourceId: "com.acme.finance:universal_resource"
@@ -111,15 +100,15 @@ resources:
     version: 1
     description: "Universal resource supporting all intent classes"
     backendId: "finance_sql"
-    sources:
-      - source: "universal_table"
-        fields:
-          - fieldId: "id"
-            type: "STRING"
-            description: "Unique identifier"
-          - fieldId: "data"
-            type: "JSON"
-            description: "Flexible data payload"
+    sourceDefinition:
+      source: "universal_table"
+      fields:
+        - fieldId: "id"
+          type: "STRING"
+          description: "Unique identifier"
+        - fieldId: "data"
+          type: "JSON"
+          description: "Flexible data payload"
 
   # Vector Resource - Embeddings
   - resourceId: "com.acme.finance:failure_vectors"
@@ -127,19 +116,19 @@ resources:
     version: 1
     description: "Vector embeddings of bank failure summaries"
     backendId: "report_vectors"
-    sources:
-      - source: "bank-summaries"
-        fields:
-          - fieldId: "summary_embedding"
-            type: "VECTOR"
-            description: "Vector embedding of the failure summary"
-            metadata:
-              vector:
-                dimensions: 1536
-                distanceFunction: "COSINE"
-          - fieldId: "bank_id"
-            type: "STRING"
-            description: "Reference to the bank record"
-          - fieldId: "metadata"
-            type: "JSON"
-            description: "Additional metadata about the embedding"
+    sourceDefinition:
+      source: "bank-summaries"
+      fields:
+        - fieldId: "summary_embedding"
+          type: "VECTOR"
+          description: "Vector embedding of the failure summary"
+          metadata:
+            vector:
+              dimensions: 1536
+              distanceFunction: "COSINE"
+        - fieldId: "bank_id"
+          type: "STRING"
+          description: "Reference to the bank record"
+        - fieldId: "metadata"
+          type: "JSON"
+          description: "Additional metadata about the embedding"
