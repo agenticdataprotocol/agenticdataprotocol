@@ -17,7 +17,7 @@ version: "1.0.0"
 
 policies:
   # Policy for single-source resource - source field can be omitted
-  - resourceId: "com.acme.finance:bank_failures"
+  - resourceSelector: "com.acme.finance:bank_failures"
     rules:
       # RBAC access control: which roles can use which intents
       - type: "ACCESS"
@@ -33,6 +33,7 @@ policies:
         fieldId: "closing_date"
         op: "GT"
         value: "2020-01-01"
+        condition: "agent_tier == 'PRODUCTION'"
 
       # Operational constraint: limit results and default sorting
       # source omitted in defaultOrderBy - OK because resource has only one source
@@ -43,7 +44,7 @@ policies:
           direction: "DESC"
 
   # Policy for vector search resource
-  - resourceId: "com.acme.finance:failure_vectors"
+  - resourceSelector: "com.acme.finance:failure_vectors"
     rules:
       - type: "OPERATIONAL"
         enforceLimit: 50
@@ -52,7 +53,7 @@ policies:
           direction: "ASC"
 
   # Policy for reports resource
-  - resourceId: "com.acme.finance:reports"
+  - resourceSelector: "com.acme.finance:reports"
     rules:
       # Mandatory filter: only show reports from last 2 years
       - type: "MANDATORY_FILTER"
@@ -64,21 +65,24 @@ policies:
       - type: "OPERATIONAL"
         enforceLimit: 200
 
-  # Policy using wildcards (supports wildcards: name part "com.acme.finance:*" or namespace "com.acme.*")
-  - resourceId: "com.acme.finance:*"
+  # Policy using wildcards (resource selector supports wildcards in name "com.acme.finance:*"
+  # or namespace "com.acme.*")
+  - resourceSelector: "com.acme.finance:*"
     rules:
       # Apply limit to all finance resources for basic tier
       - type: "OPERATIONAL"
         enforceLimit: 50
+        condition: "agent_tier == 'BASIC'"
 
       # More permissive for production tier
       - type: "OPERATIONAL"
         enforceLimit: 1000
+        condition: "agent_tier == 'PRODUCTION'"
 
   # Namespace wildcard: applies to all resources under com.acme (any sub-namespace).
   # More specific child-namespace or exact-resource rules (e.g. com.acme.finance:*)
   # SHOULD be treated as overriding or refining this broader rule.
-  - resourceId: "com.acme.*"
+  - resourceSelector: "com.acme.*"
     rules:
       - type: "ACCESS"
         roles:
@@ -88,7 +92,7 @@ policies:
             allowedIntents: [LOOKUP, QUERY]
 
   # Read-only resource: only LOOKUP and QUERY allowed for all roles
-  - resourceId: "com.acme.finance:audit_log"
+  - resourceSelector: "com.acme.finance:audit_log"
     rules:
       - type: "ACCESS"
         roles:
@@ -103,7 +107,7 @@ policies:
           direction: "DESC"
 
   # Mandatory filter only: restrict by region (no operational or access rules)
-  - resourceId: "com.acme.sales:transactions"
+  - resourceSelector: "com.acme.sales:transactions"
     rules:
       - type: "MANDATORY_FILTER"
         fieldId: "region"
@@ -111,7 +115,7 @@ policies:
         value: ["US", "EU"]
 
   # Multiple rule types for a sensitive resource
-  - resourceId: "com.acme.finance:sensitive_views"
+  - resourceSelector: "com.acme.finance:sensitive_views"
     rules:
       - type: "ACCESS"
         roles:
@@ -132,6 +136,6 @@ policies:
 # You can also define minimal policies:
 # version: "1.0.0"
 # policies:
-#   - resourceId: "com.acme.finance:bank_failures"
+#   - resourceSelector: "com.acme.finance:bank_failures"
 #     # Empty rules array = no enforcements for this resource
 #     rules: []

@@ -10,7 +10,6 @@
 
 // Import common types from the main ADP schema
 import type {
-  ResourceId,
   PredicateOperator,
   Field,
   Resource,
@@ -455,6 +454,22 @@ export interface SemanticManifest {
 export type PolicyCondition = string;
 
 /**
+ * `ResourceSelector` is used in policy matching to select resources.
+ *
+ * It may be:
+ * - An exact `ResourceId` (e.g. "com.acme.finance:bank_failures"), or
+ * - A wildcard pattern where namespace and/or name can use `*`
+ *   (e.g. "com.acme.finance:*", "com.acme.*").
+ *
+ * Keeping this separate from `ResourceId` avoids implying that all selectors
+ * are concrete domain:alias identifiers while still giving TS consumers a
+ * clear, documented string type for policy matching.
+ *
+ * @category Curation Policy Manifest
+ */
+export type ResourceSelector = string;
+
+/**
  * Mandatory filter rule that enforces required predicates.
  *
  * @category Curation Policy Manifest
@@ -607,13 +622,19 @@ export type PolicyRule = MandatoryFilterRule | OperationalRule | AccessRule;
  */
 export interface ResourcePolicy {
   /**
-   * Resource ID or wildcard pattern for which resources this policy applies.
+   * Resource selector for which resources this policy applies.
+   *
+   * This is typed as `ResourceSelector`, which can be either:
+   * - An exact `ResourceId` (e.g. "com.acme.finance:bank_failures"), or
+   * - A wildcard selector where namespace and/or name can use `*`
+   *   (e.g. "com.acme.finance:*", "com.acme.*").
+   *
    * Both namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).
    * @example "com.acme.finance:bank_failures"
    * @example "com.acme.finance:*"
    * @example "com.acme.*"
    */
-  resourceId: ResourceId;
+  resourceSelector: ResourceSelector;
 
   /**
    * List of policy rules to apply to this resource.

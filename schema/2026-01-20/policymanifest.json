@@ -145,8 +145,8 @@
     "ResourcePolicy": {
       "description": "Policy rules for a specific resource.",
       "properties": {
-        "resourceId": {
-          "description": "Resource ID or wildcard pattern for which resources this policy applies.\nBoth namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).",
+        "resourceSelector": {
+          "description": "Resource selector for which resources this policy applies.\n\nThis is typed as `ResourceSelector`, which can be either:\n- An exact `ResourceId` (e.g. \"com.acme.finance:bank_failures\"), or\n- A wildcard selector where namespace and/or name can use `*`\n  (e.g. \"com.acme.finance:*\", \"com.acme.*\").\n\nBoth namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).",
           "type": "string"
         },
         "rules": {
@@ -158,7 +158,7 @@
         }
       },
       "required": [
-        "resourceId"
+        "resourceSelector"
       ],
       "type": "object"
     },
