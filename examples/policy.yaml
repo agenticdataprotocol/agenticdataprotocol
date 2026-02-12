@@ -23,9 +23,9 @@ policies:
       - type: "ACCESS"
         roles:
           - role: admin
-            allowed_intents: [LOOKUP, QUERY, REVISE, INGEST]
+            allowedIntents: [LOOKUP, QUERY, REVISE, INGEST]
           - role: user
-            allowed_intents: [LOOKUP, QUERY]
+            allowedIntents: [LOOKUP, QUERY]
 
       # Mandatory filter: enforce data freshness
       # source omitted - OK because resource has only one source (current limitation)
@@ -83,9 +83,9 @@ policies:
       - type: "ACCESS"
         roles:
           - role: superuser
-            allowed_intents: ["*"]   # All intents
+            allowedIntents: ["*"]   # All intents
           - role: viewer
-            allowed_intents: [LOOKUP, QUERY]
+            allowedIntents: [LOOKUP, QUERY]
 
   # Read-only resource: only LOOKUP and QUERY allowed for all roles
   - resourceId: "com.acme.finance:audit_log"
@@ -93,9 +93,9 @@ policies:
       - type: "ACCESS"
         roles:
           - role: admin
-            allowed_intents: [LOOKUP, QUERY]
+            allowedIntents: [LOOKUP, QUERY]
           - role: auditor
-            allowed_intents: [LOOKUP, QUERY]
+            allowedIntents: [LOOKUP, QUERY]
       - type: "OPERATIONAL"
         enforceLimit: 500
         defaultOrderBy:
@@ -116,9 +116,9 @@ policies:
       - type: "ACCESS"
         roles:
           - role: compliance
-            allowed_intents: [LOOKUP, QUERY, REVISE]
+            allowedIntents: [LOOKUP, QUERY, REVISE]
           - role: analyst
-            allowed_intents: [LOOKUP, QUERY]
+            allowedIntents: [LOOKUP, QUERY]
       - type: "MANDATORY_FILTER"
         fieldId: "data_classification"
         op: "NEQ"

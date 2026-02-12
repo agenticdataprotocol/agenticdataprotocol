@@ -533,9 +533,9 @@ export interface OperationalRule {
  *
  * @category Curation Policy Manifest
  * @example
- * { "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }
+ * { "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }
  * @example
- * { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }
+ * { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }
  */
 export interface RoleAccessEntry {
   /**
@@ -548,7 +548,7 @@ export interface RoleAccessEntry {
    * Intent classes this role is allowed to use on the resource.
    * Use "*" to allow all intent classes for this role.
    */
-  allowed_intents: IntentClass[];
+  allowedIntents: IntentClass[];
 }
 
 /**
@@ -560,8 +560,8 @@ export interface RoleAccessEntry {
  * {
  *   "type": "ACCESS",
  *   "roles": [
- *     { "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] },
- *     { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }
+ *     { "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] },
+ *     { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }
  *   ]
  * }
  */
@@ -574,7 +574,7 @@ export interface AccessRule {
   /**
    * List of role-to-allowed-intents mappings.
    * Request is allowed only if the current role is listed and the intent class
-   * is in that role's allowed_intents (and the resource supports the intent).
+   * is in that role's allowedIntents (and the resource supports the intent).
    */
   roles: RoleAccessEntry[];
 }
@@ -599,7 +599,7 @@ export type PolicyRule = MandatoryFilterRule | OperationalRule | AccessRule;
  * {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   "rules": [
- *     { "type": "ACCESS", "roles": [{ "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }] },
+ *     { "type": "ACCESS", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }] },
  *     { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
  *     { "type": "OPERATIONAL", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
  *   ]
