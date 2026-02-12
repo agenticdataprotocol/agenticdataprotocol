@@ -612,7 +612,7 @@ export type PolicyRule = MandatoryFilterRule | OperationalRule | AccessRule;
  * @category Curation Policy Manifest
  * @example
  * {
- *   "resourceId": "com.acme.finance:bank_failures",
+ *   "resourceSelector": "com.acme.finance:bank_failures",
  *   "rules": [
  *     { "type": "ACCESS", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }] },
  *     { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
@@ -671,7 +671,7 @@ export interface ResourcePolicy {
  *   "version": "1.0.0",
  *   "policies": [
  *     {
- *       "resourceId": "com.acme.finance:bank_failures",
+ *       "resourceSelector": "com.acme.finance:bank_failures",
  *       "rules": [
  *         { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
  *         { "type": "OPERATIONAL", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
