@@ -1,6 +1,39 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "AccessRule": {
+      "description": "RBAC-style access rule: restricts which roles can use which intent classes.\nAt most one ACCESS rule per resource is recommended to avoid ambiguity.",
+      "properties": {
+        "roles": {
+          "description": "List of role-to-allowed-intents mappings.\nRequest is allowed only if the current role is listed and the intent class\nis in that role's allowed_intents (and the resource supports the intent).",
+          "items": {
+            "$ref": "#/$defs/RoleAccessEntry"
+          },
+          "type": "array"
+        },
+        "type": {
+          "const": "ACCESS",
+          "description": "Type of policy rule.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "roles",
+        "type"
+      ],
+      "type": "object"
+    },
+    "IntentClass": {
+      "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
+      "enum": [
+        "*",
+        "INGEST",
+        "LOOKUP",
+        "QUERY",
+        "REVISE"
+      ],
+      "type": "string"
+    },
     "MandatoryFilterRule": {
       "description": "Mandatory filter rule that enforces required predicates.",
       "properties": {
@@ -85,9 +118,12 @@
         },
         {
           "$ref": "#/$defs/OperationalRule"
+        },
+        {
+          "$ref": "#/$defs/AccessRule"
         }
       ],
-      "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)"
+      "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)\n- ACCESS: Role-based allowed intents per resource (RBAC)"
     },
     "PredicateOperator": {
       "description": "Operators supported for predicate expressions.",
@@ -110,7 +146,7 @@
       "description": "Policy rules for a specific resource.",
       "properties": {
         "resourceId": {
-          "description": "Resource identifier for which these policies apply.",
+          "description": "Resource ID or wildcard pattern for which resources this policy applies.\nBoth namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).",
           "type": "string"
         },
         "rules": {
@@ -123,6 +159,27 @@
       },
       "required": [
         "resourceId"
+      ],
+      "type": "object"
+    },
+    "RoleAccessEntry": {
+      "description": "Role-to-intents mapping for RBAC access control.\nDefines which intent classes a role is allowed to use on the resource.",
+      "properties": {
+        "allowed_intents": {
+          "description": "Intent classes this role is allowed to use on the resource.\nUse \"*\" to allow all intent classes for this role.",
+          "items": {
+            "$ref": "#/$defs/IntentClass"
+          },
+          "type": "array"
+        },
+        "role": {
+          "description": "Role identifier (e.g. \"admin\", \"user\").\nThe runtime supplies the current role from auth/session when evaluating access.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "allowed_intents",
+        "role"
       ],
       "type": "object"
     },

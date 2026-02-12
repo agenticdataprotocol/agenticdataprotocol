@@ -15,6 +15,7 @@ import type {
   Field,
   Resource,
   SortOrder,
+  IntentClass,
 } from "./schema";
 
 /* ============================================================================
@@ -527,15 +528,68 @@ export interface OperationalRule {
 }
 
 /**
+ * Role-to-intents mapping for RBAC access control.
+ * Defines which intent classes a role is allowed to use on the resource.
+ *
+ * @category Curation Policy Manifest
+ * @example
+ * { "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }
+ * @example
+ * { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }
+ */
+export interface RoleAccessEntry {
+  /**
+   * Role identifier (e.g. "admin", "user").
+   * The runtime supplies the current role from auth/session when evaluating access.
+   */
+  role: string;
+
+  /**
+   * Intent classes this role is allowed to use on the resource.
+   * Use "*" to allow all intent classes for this role.
+   */
+  allowed_intents: IntentClass[];
+}
+
+/**
+ * RBAC-style access rule: restricts which roles can use which intent classes.
+ * At most one ACCESS rule per resource is recommended to avoid ambiguity.
+ *
+ * @category Curation Policy Manifest
+ * @example
+ * {
+ *   "type": "ACCESS",
+ *   "roles": [
+ *     { "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] },
+ *     { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }
+ *   ]
+ * }
+ */
+export interface AccessRule {
+  /**
+   * Type of policy rule.
+   */
+  type: "ACCESS";
+
+  /**
+   * List of role-to-allowed-intents mappings.
+   * Request is allowed only if the current role is listed and the intent class
+   * is in that role's allowed_intents (and the resource supports the intent).
+   */
+  roles: RoleAccessEntry[];
+}
+
+/**
  * Union type for all policy rule types.
  *
  * Supported rule types:
  * - MANDATORY_FILTER: Enforces required predicates that must be included in queries
  * - OPERATIONAL: Applies operational constraints (limits, default sorting)
+ * - ACCESS: Role-based allowed intents per resource (RBAC)
  *
  * @category Curation Policy Manifest
  */
-export type PolicyRule = MandatoryFilterRule | OperationalRule;
+export type PolicyRule = MandatoryFilterRule | OperationalRule | AccessRule;
 
 /**
  * Policy rules for a specific resource.
@@ -545,6 +599,7 @@ export type PolicyRule = MandatoryFilterRule | OperationalRule;
  * {
  *   "resourceId": "com.acme.finance:bank_failures",
  *   "rules": [
+ *     { "type": "ACCESS", "roles": [{ "role": "admin", "allowed_intents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowed_intents": ["LOOKUP", "QUERY"] }] },
  *     { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
  *     { "type": "OPERATIONAL", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
  *   ]
@@ -552,8 +607,11 @@ export type PolicyRule = MandatoryFilterRule | OperationalRule;
  */
 export interface ResourcePolicy {
   /**
-   * Resource identifier for which these policies apply.
+   * Resource ID or wildcard pattern for which resources this policy applies.
+   * Both namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).
    * @example "com.acme.finance:bank_failures"
+   * @example "com.acme.finance:*"
+   * @example "com.acme.*"
    */
   resourceId: ResourceId;
 

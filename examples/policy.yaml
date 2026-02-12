@@ -19,13 +19,20 @@ policies:
   # Policy for single-source resource - source field can be omitted
   - resourceId: "com.acme.finance:bank_failures"
     rules:
+      # RBAC access control: which roles can use which intents
+      - type: "ACCESS"
+        roles:
+          - role: admin
+            allowed_intents: [LOOKUP, QUERY, REVISE, INGEST]
+          - role: user
+            allowed_intents: [LOOKUP, QUERY]
+
       # Mandatory filter: enforce data freshness
       # source omitted - OK because resource has only one source (current limitation)
       - type: "MANDATORY_FILTER"
         fieldId: "closing_date"
         op: "GT"
         value: "2020-01-01"
-        condition: "agent_tier == 'PRODUCTION'"
 
       # Operational constraint: limit results and default sorting
       # source omitted in defaultOrderBy - OK because resource has only one source
@@ -34,7 +41,6 @@ policies:
         defaultOrderBy:
           fieldId: "closing_date"
           direction: "DESC"
-        condition: "agent_tier == 'PRODUCTION'"
 
   # Policy for vector search resource
   - resourceId: "com.acme.finance:failure_vectors"
@@ -58,18 +64,67 @@ policies:
       - type: "OPERATIONAL"
         enforceLimit: 200
 
-  # Policy with conditional rules
+  # Policy using wildcards (supports wildcards: name part "com.acme.finance:*" or namespace "com.acme.*")
   - resourceId: "com.acme.finance:*"
     rules:
       # Apply limit to all finance resources for basic tier
       - type: "OPERATIONAL"
         enforceLimit: 50
-        condition: "agent_tier == 'BASIC'"
 
       # More permissive for production tier
       - type: "OPERATIONAL"
         enforceLimit: 1000
-        condition: "agent_tier == 'PRODUCTION'"
+
+  # Namespace wildcard: applies to all resources under com.acme (any sub-namespace).
+  # More specific child-namespace or exact-resource rules (e.g. com.acme.finance:*)
+  # SHOULD be treated as overriding or refining this broader rule.
+  - resourceId: "com.acme.*"
+    rules:
+      - type: "ACCESS"
+        roles:
+          - role: superuser
+            allowed_intents: ["*"]   # All intents
+          - role: viewer
+            allowed_intents: [LOOKUP, QUERY]
+
+  # Read-only resource: only LOOKUP and QUERY allowed for all roles
+  - resourceId: "com.acme.finance:audit_log"
+    rules:
+      - type: "ACCESS"
+        roles:
+          - role: admin
+            allowed_intents: [LOOKUP, QUERY]
+          - role: auditor
+            allowed_intents: [LOOKUP, QUERY]
+      - type: "OPERATIONAL"
+        enforceLimit: 500
+        defaultOrderBy:
+          fieldId: "event_time"
+          direction: "DESC"
+
+  # Mandatory filter only: restrict by region (no operational or access rules)
+  - resourceId: "com.acme.sales:transactions"
+    rules:
+      - type: "MANDATORY_FILTER"
+        fieldId: "region"
+        op: "IN"
+        value: ["US", "EU"]
+
+  # Multiple rule types for a sensitive resource
+  - resourceId: "com.acme.finance:sensitive_views"
+    rules:
+      - type: "ACCESS"
+        roles:
+          - role: compliance
+            allowed_intents: [LOOKUP, QUERY, REVISE]
+          - role: analyst
+            allowed_intents: [LOOKUP, QUERY]
+      - type: "MANDATORY_FILTER"
+        fieldId: "data_classification"
+        op: "NEQ"
+        value: "internal_only"
+      - type: "OPERATIONAL"
+        enforceLimit: 100
 
 # ============================================================================
 # Minimal Policy Example
