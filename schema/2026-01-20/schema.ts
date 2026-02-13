@@ -947,6 +947,11 @@ export interface LookupIntent {
   intentClass: "LOOKUP";
 
   /**
+   * The resource to operate on.
+   */
+  resourceId: ResourceId;
+
+  /**
    * The identity predicate specifying the unique key to lookup.
    * This should uniquely identify a single entity (e.g., primary key lookup).
    * Only the EQ operator is allowed for identity lookups.
@@ -988,6 +993,11 @@ export interface QueryIntent {
   intentClass: "QUERY";
 
   /**
+   * The resource to operate on.
+   */
+  resourceId: ResourceId;
+
+  /**
    * Predicates for filtering data.
    */
   predicates: PredicateGroup;
@@ -1018,6 +1028,11 @@ export interface IngestIntent {
   intentClass: "INGEST";
 
   /**
+   * The resource to operate on.
+   */
+  resourceId: ResourceId;
+
+  /**
    * The data payload to ingest.
    * An array of records (key-value maps).
    */
@@ -1033,6 +1048,11 @@ export interface ReviseIntent {
   intentClass: "REVISE";
 
   /**
+   * The resource to operate on.
+   */
+  resourceId: ResourceId;
+
+  /**
    * Predicates to identify the records to update.
    */
   predicates: PredicateGroup;
@@ -1045,6 +1065,13 @@ export interface ReviseIntent {
 
 /**
  * The Intent structure used in VALIDATE and EXECUTE operations.
+ *
+ * **Extensibility (multi-resource intents):** Current intents each have a single
+ * `resourceId`. Future intents (e.g. JOIN, CORRELATE) may need multiple resources.
+ * Use a separate field for that case (e.g. `resourceIds: ResourceId[]`) on the
+ * new intent type. Implementors that need "all resources for this intent" should
+ * branch on `intentClass` and read `resourceId` or the multi-resource field
+ * accordingly.
  *
  * @category Common Types
  */
@@ -1103,12 +1130,7 @@ export interface ValidationIssue {
  */
 export interface ValidateRequestParams extends RequestParams {
   /**
-   * The resource to validate against.
-   */
-  resourceId: ResourceId;
-
-  /**
-   * The Intent to validate.
+   * The Intent to validate (includes resourceId).
    */
   intent: Intent;
 }
@@ -1151,12 +1173,7 @@ export interface ValidateResult extends Result {
  */
 export interface ExecuteRequestParams extends PaginatedRequestParams {
   /**
-   * The resource to execute against.
-   */
-  resourceId: ResourceId;
-
-  /**
-   * The Intent to execute.
+   * The Intent to execute (includes resourceId).
    */
   intent: Intent;
 }
