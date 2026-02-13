@@ -1,5 +1,14 @@
 # Policy Manifest Example
-# Defines governance rules and constraints for resource access
+# Defines governance policies (rules) for resource access.
+# Each policy specifies its own scope: resourceId for MANDATORY_FILTER and
+# OPERATIONAL (exact resource only), resourceSelector for ACCESS (exact or wildcard).
+# Resource selectors follow the same namespace/name structure as ResourceId, but
+# with a very simple wildcard rule: `*` may appear only once and only as the last
+# token. Supported forms:
+#   - Exact: "namespace:name"                (no `*`)
+#   - All names in one namespace: "ns:*"     (e.g. "com.acme.finance:*")
+#   - Namespace prefix: "ns.*" or "ns.sub.*" (e.g. "com.acme.*", "com.acme.finance.*")
+# Forms like "a*", "a.b*", "com.acme.*:name", or "com.acme.*:*" are not supported.
 #
 
 # ============================================================================
@@ -11,131 +20,110 @@
 # # All resources are accessible without restrictions
 
 # ============================================================================
-# Full Manual Definition with Policy Rules
+# Full Manual Definition with Policies
 # ============================================================================
 version: "1.0.0"
 
 policies:
-  # Policy for single-source resource - source field can be omitted
-  - resourceSelector: "com.acme.finance:bank_failures"
-    rules:
-      # RBAC access control: which roles can use which intents
-      - type: "ACCESS"
-        roles:
-          - role: admin
-            allowedIntents: [LOOKUP, QUERY, REVISE, INGEST]
-          - role: user
-            allowedIntents: [LOOKUP, QUERY]
+  # --- com.acme.finance:bank_failures ---
+  - type: "ACCESS"
+    resourceSelector: "com.acme.finance:bank_failures"
+    roles:
+      - role: admin
+        allowedIntents: [LOOKUP, QUERY, REVISE, INGEST]
+      - role: user
+        allowedIntents: [LOOKUP, QUERY]
 
-      # Mandatory filter: enforce data freshness
-      # source omitted - OK because resource has only one source (current limitation)
-      - type: "MANDATORY_FILTER"
-        fieldId: "closing_date"
-        op: "GT"
-        value: "2020-01-01"
-        condition: "agent_tier == 'PRODUCTION'"
+  - type: "MANDATORY_FILTER"
+    resourceId: "com.acme.finance:bank_failures"
+    fieldId: "closing_date"
+    op: "GT"
+    value: "2020-01-01"
+    condition: "agent_tier == 'PRODUCTION'"
 
-      # Operational constraint: limit results and default sorting
-      # source omitted in defaultOrderBy - OK because resource has only one source
-      - type: "OPERATIONAL"
-        enforceLimit: 100
-        defaultOrderBy:
-          fieldId: "closing_date"
-          direction: "DESC"
+  - type: "OPERATIONAL"
+    resourceId: "com.acme.finance:bank_failures"
+    enforceLimit: 100
+    defaultOrderBy:
+      fieldId: "closing_date"
+      direction: "DESC"
 
-  # Policy for vector search resource
-  - resourceSelector: "com.acme.finance:failure_vectors"
-    rules:
-      - type: "OPERATIONAL"
-        enforceLimit: 50
-        defaultOrderBy:
-          fieldId: "bank_id"
-          direction: "ASC"
+  # --- com.acme.finance:failure_vectors ---
+  - type: "OPERATIONAL"
+    resourceId: "com.acme.finance:failure_vectors"
+    enforceLimit: 50
+    defaultOrderBy:
+      fieldId: "bank_id"
+      direction: "ASC"
 
-  # Policy for reports resource
-  - resourceSelector: "com.acme.finance:reports"
-    rules:
-      # Mandatory filter: only show reports from last 2 years
-      - type: "MANDATORY_FILTER"
-        fieldId: "report_date"
-        op: "GTE"
-        value: "2024-01-01"
+  # --- com.acme.finance:reports ---
+  - type: "MANDATORY_FILTER"
+    resourceId: "com.acme.finance:reports"
+    fieldId: "report_date"
+    op: "GTE"
+    value: "2024-01-01"
 
-      # Operational constraint: limit to 200 results
-      - type: "OPERATIONAL"
-        enforceLimit: 200
+  - type: "OPERATIONAL"
+    resourceId: "com.acme.finance:reports"
+    enforceLimit: 200
 
-  # Policy using wildcards (resource selector supports wildcards in name "com.acme.finance:*"
-  # or namespace "com.acme.*")
-  - resourceSelector: "com.acme.finance:*"
-    rules:
-      # Apply limit to all finance resources for basic tier
-      - type: "OPERATIONAL"
-        enforceLimit: 50
-        condition: "agent_tier == 'BASIC'"
+  # --- ACCESS with wildcard: all resources under com.acme (any sub-namespace) ---
+  # "com.acme.*" is a namespace-prefix selector that matches any resource whose
+  # namespace starts with "com.acme." (e.g. "com.acme.finance:bank_failures").
+  # More specific child-namespace or exact-resource policies override broader ones.
+  - type: "ACCESS"
+    resourceSelector: "com.acme.*"
+    roles:
+      - role: superuser
+        allowedIntents: ["*"]
+      - role: viewer
+        allowedIntents: [LOOKUP, QUERY]
 
-      # More permissive for production tier
-      - type: "OPERATIONAL"
-        enforceLimit: 1000
-        condition: "agent_tier == 'PRODUCTION'"
+  # --- com.acme.finance:audit_log (read-only: LOOKUP and QUERY only) ---
+  - type: "ACCESS"
+    resourceSelector: "com.acme.finance:audit_log"
+    roles:
+      - role: admin
+        allowedIntents: [LOOKUP, QUERY]
+      - role: auditor
+        allowedIntents: [LOOKUP, QUERY]
 
-  # Namespace wildcard: applies to all resources under com.acme (any sub-namespace).
-  # More specific child-namespace or exact-resource rules (e.g. com.acme.finance:*)
-  # SHOULD be treated as overriding or refining this broader rule.
-  - resourceSelector: "com.acme.*"
-    rules:
-      - type: "ACCESS"
-        roles:
-          - role: superuser
-            allowedIntents: ["*"]   # All intents
-          - role: viewer
-            allowedIntents: [LOOKUP, QUERY]
+  - type: "OPERATIONAL"
+    resourceId: "com.acme.finance:audit_log"
+    enforceLimit: 500
+    defaultOrderBy:
+      fieldId: "event_time"
+      direction: "DESC"
 
-  # Read-only resource: only LOOKUP and QUERY allowed for all roles
-  - resourceSelector: "com.acme.finance:audit_log"
-    rules:
-      - type: "ACCESS"
-        roles:
-          - role: admin
-            allowedIntents: [LOOKUP, QUERY]
-          - role: auditor
-            allowedIntents: [LOOKUP, QUERY]
-      - type: "OPERATIONAL"
-        enforceLimit: 500
-        defaultOrderBy:
-          fieldId: "event_time"
-          direction: "DESC"
+  # --- com.acme.sales:transactions (mandatory filter only) ---
+  - type: "MANDATORY_FILTER"
+    resourceId: "com.acme.sales:transactions"
+    fieldId: "region"
+    op: "IN"
+    value: ["US", "EU"]
 
-  # Mandatory filter only: restrict by region (no operational or access rules)
-  - resourceSelector: "com.acme.sales:transactions"
-    rules:
-      - type: "MANDATORY_FILTER"
-        fieldId: "region"
-        op: "IN"
-        value: ["US", "EU"]
+  # --- com.acme.finance:sensitive_views (multiple policy types) ---
+  - type: "ACCESS"
+    resourceSelector: "com.acme.finance:sensitive_views"
+    roles:
+      - role: compliance
+        allowedIntents: [LOOKUP, QUERY, REVISE]
+      - role: analyst
+        allowedIntents: [LOOKUP, QUERY]
 
-  # Multiple rule types for a sensitive resource
-  - resourceSelector: "com.acme.finance:sensitive_views"
-    rules:
-      - type: "ACCESS"
-        roles:
-          - role: compliance
-            allowedIntents: [LOOKUP, QUERY, REVISE]
-          - role: analyst
-            allowedIntents: [LOOKUP, QUERY]
-      - type: "MANDATORY_FILTER"
-        fieldId: "data_classification"
-        op: "NEQ"
-        value: "internal_only"
-      - type: "OPERATIONAL"
-        enforceLimit: 100
+  - type: "MANDATORY_FILTER"
+    resourceId: "com.acme.finance:sensitive_views"
+    fieldId: "data_classification"
+    op: "NEQ"
+    value: "internal_only"
+
+  - type: "OPERATIONAL"
+    resourceId: "com.acme.finance:sensitive_views"
+    enforceLimit: 100
 
 # ============================================================================
 # Minimal Policy Example
 # ============================================================================
-# You can also define minimal policies:
+# You can also define minimal manifests:
 # version: "1.0.0"
-# policies:
-#   - resourceSelector: "com.acme.finance:bank_failures"
-#     # Empty rules array = no enforcements for this resource
-#     rules: []
+# policies: []   # Empty list = no enforcements

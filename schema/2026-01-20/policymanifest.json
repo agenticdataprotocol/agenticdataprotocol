@@ -1,9 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
-    "AccessRule": {
-      "description": "RBAC-style access rule: restricts which roles can use which intent classes.\nAt most one ACCESS rule per resource is recommended to avoid ambiguity.",
+    "AccessPolicy": {
+      "description": "RBAC-style access policy: restricts which roles can use which intent classes.\nEach ACCESS policy declares which resources it applies to via required\n`resourceSelector` (exact resource ID or wildcard, e.g. com.acme.finance:*\nor com.acme.*).",
       "properties": {
+        "resourceSelector": {
+          "description": "Resource selector for which resources this policy applies (exact resource ID\nor wildcard, e.g. com.acme.finance:* or com.acme.*).",
+          "type": "string"
+        },
         "roles": {
           "description": "List of role-to-allowed-intents mappings.\nRequest is allowed only if the current role is listed and the intent class\nis in that role's allowedIntents (and the resource supports the intent).",
           "items": {
@@ -13,11 +17,12 @@
         },
         "type": {
           "const": "ACCESS",
-          "description": "Type of policy rule.",
+          "description": "Type of policy.",
           "type": "string"
         }
       },
       "required": [
+        "resourceSelector",
         "roles",
         "type"
       ],
@@ -34,11 +39,11 @@
       ],
       "type": "string"
     },
-    "MandatoryFilterRule": {
-      "description": "Mandatory filter rule that enforces required predicates.",
+    "MandatoryFilterPolicy": {
+      "description": "Mandatory filter policy that enforces required predicates.\nApplies to exactly one resource; `resourceId` is required and must be an\nexact resource ID (no wildcards). `fieldId` is interpreted against that\nresource's schema.",
       "properties": {
         "condition": {
-          "description": "Optional condition for when this rule applies.",
+          "description": "Optional condition for when this policy applies.",
           "type": "string"
         },
         "fieldId": {
@@ -49,9 +54,13 @@
           "$ref": "#/$defs/PredicateOperator",
           "description": "Operator for the mandatory filter."
         },
+        "resourceId": {
+          "description": "Resource ID (exact) this policy applies to. `fieldId` is interpreted against\nthis resource's schema. No wildcards.",
+          "type": "string"
+        },
         "type": {
           "const": "MANDATORY_FILTER",
-          "description": "Type of policy rule.",
+          "description": "Type of policy.",
           "type": "string"
         },
         "value": {
@@ -80,16 +89,17 @@
       "required": [
         "fieldId",
         "op",
+        "resourceId",
         "type",
         "value"
       ],
       "type": "object"
     },
-    "OperationalRule": {
-      "description": "Operational constraints for resource access.",
+    "OperationalPolicy": {
+      "description": "Operational policy that applies constraints for resource access.\nApplies to exactly one resource; `resourceId` is required and must be an\nexact resource ID (no wildcards). `defaultOrderBy` is interpreted against\nthat resource's schema.",
       "properties": {
         "condition": {
-          "description": "Optional condition for when this rule applies.",
+          "description": "Optional condition for when this policy applies.",
           "type": "string"
         },
         "defaultOrderBy": {
@@ -100,30 +110,35 @@
           "description": "Maximum number of results to return (enforced limit).",
           "type": "integer"
         },
+        "resourceId": {
+          "description": "Resource ID (exact) this policy applies to. `defaultOrderBy` is interpreted\nagainst this resource's schema. No wildcards.",
+          "type": "string"
+        },
         "type": {
           "const": "OPERATIONAL",
-          "description": "Type of policy rule.",
+          "description": "Type of policy.",
           "type": "string"
         }
       },
       "required": [
+        "resourceId",
         "type"
       ],
       "type": "object"
     },
-    "PolicyRule": {
+    "Policy": {
       "anyOf": [
         {
-          "$ref": "#/$defs/MandatoryFilterRule"
+          "$ref": "#/$defs/MandatoryFilterPolicy"
         },
         {
-          "$ref": "#/$defs/OperationalRule"
+          "$ref": "#/$defs/OperationalPolicy"
         },
         {
-          "$ref": "#/$defs/AccessRule"
+          "$ref": "#/$defs/AccessPolicy"
         }
       ],
-      "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)\n- ACCESS: Role-based allowed intents per resource (RBAC)"
+      "description": "Union type for all policy types (each appears as a rule in the manifest).\n\nSupported policy types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)\n- ACCESS: Role-based allowed intents per resource (RBAC)"
     },
     "PredicateOperator": {
       "description": "Operators supported for predicate expressions.",
@@ -141,26 +156,6 @@
         "SIMILAR"
       ],
       "type": "string"
-    },
-    "ResourcePolicy": {
-      "description": "Policy rules for a specific resource.",
-      "properties": {
-        "resourceSelector": {
-          "description": "Resource selector for which resources this policy applies.\n\nThis is typed as `ResourceSelector`, which can be either:\n- An exact `ResourceId` (e.g. \"com.acme.finance:bank_failures\"), or\n- A wildcard selector where namespace and/or name can use `*`\n  (e.g. \"com.acme.finance:*\", \"com.acme.*\").\n\nBoth namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).",
-          "type": "string"
-        },
-        "rules": {
-          "description": "List of policy rules to apply to this resource.\nIf omitted or empty, no special enforcements are applied for this resource.",
-          "items": {
-            "$ref": "#/$defs/PolicyRule"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "resourceSelector"
-      ],
-      "type": "object"
     },
     "RoleAccessEntry": {
       "description": "Role-to-intents mapping for RBAC access control.\nDefines which intent classes a role is allowed to use on the resource.",
@@ -206,12 +201,12 @@
       "type": "object"
     }
   },
-  "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.\nWhen omitted or empty, no special enforcements are applied - resources are accessible\nwithout mandatory filters or operational constraints. This is ideal for\ndevelopment and testing scenarios.",
+  "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.\nWhen omitted or empty, no special enforcements are applied - resources are accessible\nwithout mandatory filters or operational constraints. This is ideal for\ndevelopment and testing scenarios.\n\nEach policy in the list carries its own scope: `resourceId` for MANDATORY_FILTER and\nOPERATIONAL (exact resource only), `resourceSelector` for ACCESS (exact or wildcard).",
   "properties": {
     "policies": {
-      "description": "List of resource policies.\n\n**Bootstrap behavior**: If omitted or empty, no special enforcements are applied.\nResources are accessible without:\n- Mandatory filters (no required predicates)\n- Operational constraints (no limits, no default sorting)\n\nThis provides unrestricted access, ideal for:\n- Development and testing\n- Quick prototyping\n- Internal tools with trusted access\n\nFor production use, explicitly define policies to enforce security, data governance,\nand access controls.",
+      "description": "List of policies (rules). If omitted or empty, no special enforcements are applied.\n\n**Bootstrap behavior**: Omit `policies` or use `policies: []` for unrestricted\naccess (no mandatory filters, no operational constraints). For production,\ndefine policies to enforce security, data governance, and access controls.\nEach policy specifies its own scope (resourceId or resourceSelector).",
       "items": {
-        "$ref": "#/$defs/ResourcePolicy"
+        "$ref": "#/$defs/Policy"
       },
       "type": "array"
     },

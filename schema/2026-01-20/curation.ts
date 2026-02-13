@@ -13,6 +13,7 @@ import type {
   PredicateOperator,
   Field,
   Resource,
+  ResourceId,
   SortOrder,
   IntentClass,
 } from "./schema";
@@ -446,7 +447,7 @@ export interface SemanticManifest {
  * ============================================================================ */
 
 /**
- * Condition expression for conditional policy rules.
+ * Condition expression for conditional policies.
  * Supports simple expressions like `agent_tier == 'BASIC'`.
  *
  * @category Curation Policy Manifest
@@ -456,36 +457,57 @@ export type PolicyCondition = string;
 /**
  * `ResourceSelector` is used in policy matching to select resources.
  *
- * It may be:
- * - An exact `ResourceId` (e.g. "com.acme.finance:bank_failures"), or
- * - A wildcard pattern where namespace and/or name can use `*`
- *   (e.g. "com.acme.finance:*", "com.acme.*").
+ * **Grammar (string form)** — wildcard `*` may appear **only once** and **only
+ * as the final token**. Supported shapes are:
+ * - **Exact**: `"namespace:name"` — matches a single `ResourceId`
+ *   (e.g. `"com.acme.finance:bank_failures"`). No `*` allowed.
+ * - **All names in one namespace**: `"namespace:*"` — matches all resources
+ *   whose `ResourceId` has the exact `namespace` and any name
+ *   (e.g. `"com.acme.finance:*"`).
+ * - **Namespace prefix (no colon)**: `"namespace.*"` — matches all resources
+ *   whose namespace starts with `namespace.` and any name
+ *   (e.g. `"com.acme.*"`, `"com.acme.finance.*"`).
  *
- * Keeping this separate from `ResourceId` avoids implying that all selectors
- * are concrete domain:alias identifiers while still giving TS consumers a
- * clear, documented string type for policy matching.
+ * Disallowed examples:
+ * - `"a*"` or `"a.b*"` (wildcard inside a segment)
+ * - `"com.acme.*:bank_failures"` (wildcard not in the last token)
+ * - `"com.acme.*:*"` (more than one wildcard token)
+ *
+ * **Relationship to `ResourceId`**:
+ * - `ResourceId` is always a concrete `namespace:name` identifier with **no wildcards**.
+ * - `ResourceSelector` may be an exact `ResourceId`, or one of the wildcard forms above.
  *
  * @category Curation Policy Manifest
  */
 export type ResourceSelector = string;
 
 /**
- * Mandatory filter rule that enforces required predicates.
+ * Mandatory filter policy that enforces required predicates.
+ * Applies to exactly one resource; `resourceId` is required and must be an
+ * exact resource ID (no wildcards). `fieldId` is interpreted against that
+ * resource's schema.
  *
  * @category Curation Policy Manifest
  * @example
  * {
  *   "type": "MANDATORY_FILTER",
+ *   "resourceId": "com.acme.finance:bank_failures",
  *   "fieldId": "closing_date",
  *   "op": "GT",
  *   "value": "2020-01-01"
  * }
  */
-export interface MandatoryFilterRule {
+export interface MandatoryFilterPolicy {
   /**
-   * Type of policy rule.
+   * Type of policy.
    */
   type: "MANDATORY_FILTER";
+
+  /**
+   * Resource ID (exact) this policy applies to. `fieldId` is interpreted against
+   * this resource's schema. No wildcards.
+   */
+  resourceId: ResourceId;
 
   /**
    * Field identifier for the mandatory filter.
@@ -503,27 +525,37 @@ export interface MandatoryFilterRule {
   value: string | number | boolean | (string | number | boolean)[];
 
   /**
-   * Optional condition for when this rule applies.
+   * Optional condition for when this policy applies.
    */
   condition?: PolicyCondition;
 }
 
 /**
- * Operational constraints for resource access.
+ * Operational policy that applies constraints for resource access.
+ * Applies to exactly one resource; `resourceId` is required and must be an
+ * exact resource ID (no wildcards). `defaultOrderBy` is interpreted against
+ * that resource's schema.
  *
  * @category Curation Policy Manifest
  * @example
  * {
  *   "type": "OPERATIONAL",
+ *   "resourceId": "com.acme.finance:bank_failures",
  *   "enforceLimit": 100,
  *   "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" }
  * }
  */
-export interface OperationalRule {
+export interface OperationalPolicy {
   /**
-   * Type of policy rule.
+   * Type of policy.
    */
   type: "OPERATIONAL";
+
+  /**
+   * Resource ID (exact) this policy applies to. `defaultOrderBy` is interpreted
+   * against this resource's schema. No wildcards.
+   */
+  resourceId: ResourceId;
 
   /**
    * Maximum number of results to return (enforced limit).
@@ -537,7 +569,7 @@ export interface OperationalRule {
   defaultOrderBy?: SortOrder;
 
   /**
-   * Optional condition for when this rule applies.
+   * Optional condition for when this policy applies.
    */
   condition?: PolicyCondition;
 }
@@ -567,24 +599,60 @@ export interface RoleAccessEntry {
 }
 
 /**
- * RBAC-style access rule: restricts which roles can use which intent classes.
- * At most one ACCESS rule per resource is recommended to avoid ambiguity.
+ * RBAC-style access policy: restricts which roles can use which intent classes.
+ * Each ACCESS policy declares which resources it applies to via required
+ * `resourceSelector`, which uses the `ResourceSelector` grammar:
+ * - Exact resource ID (e.g. `"com.acme.finance:bank_failures"`), or
+ * - Wildcard pattern with `*` only as the final token, such as
+ *   `"com.acme.finance:*"`, `"com.acme.*"`, or `"com.acme.finance.*"`.
+ *
+ * **Deterministic resolution when multiple ACCESS policies match**
+ *
+ * Multiple ACCESS policies may match the same concrete `ResourceId` via overlapping
+ * selectors (for example, `"com.acme.*"` and `"com.acme.finance:*"`). Runtimes
+ * MUST resolve them deterministically as follows:
+ *
+ * 1. Compute the set of ACCESS policies whose `resourceSelector` matches the
+ *    target `ResourceId`.
+ * 2. For each matching selector, compute a specificity rank:
+ *    - Highest: exact `namespace:name`
+ *    - Next: exact-namespace wildcard name (`namespace:*`)
+ *    - Lowest: namespace-prefix forms (`namespace.*`, `namespace.sub.*`), where
+ *      longer namespaces are more specific than shorter ones.
+ * 3. Discard any ACCESS policies whose selector has lower specificity than the
+ *    maximum rank among matches.
+ * 4. From the remaining ACCESS policies (all with equal, highest specificity),
+ *    merge `roles` deterministically:
+ *    - For each role, take the **union** of `allowedIntents` across policies,
+ *      de-duplicating values.
+ *    - If any `allowedIntents` for a role contains `"*"`, treat that as
+ *      "all intent classes" for that role regardless of other entries.
+ *
+ * After this resolution/merge, the resulting effective `roles` set is used
+ * to decide if a given `(role, intentClass)` is allowed.
  *
  * @category Curation Policy Manifest
  * @example
  * {
  *   "type": "ACCESS",
+ *   "resourceSelector": "com.acme.finance:bank_failures",
  *   "roles": [
  *     { "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] },
  *     { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }
  *   ]
  * }
  */
-export interface AccessRule {
+export interface AccessPolicy {
   /**
-   * Type of policy rule.
+   * Type of policy.
    */
   type: "ACCESS";
+
+  /**
+   * Resource selector for which resources this policy applies (exact resource ID
+   * or wildcard, e.g. com.acme.finance:* or com.acme.*).
+   */
+  resourceSelector: ResourceSelector;
 
   /**
    * List of role-to-allowed-intents mappings.
@@ -595,53 +663,16 @@ export interface AccessRule {
 }
 
 /**
- * Union type for all policy rule types.
+ * Union type for all policy types (each appears as a rule in the manifest).
  *
- * Supported rule types:
+ * Supported policy types:
  * - MANDATORY_FILTER: Enforces required predicates that must be included in queries
  * - OPERATIONAL: Applies operational constraints (limits, default sorting)
  * - ACCESS: Role-based allowed intents per resource (RBAC)
  *
  * @category Curation Policy Manifest
  */
-export type PolicyRule = MandatoryFilterRule | OperationalRule | AccessRule;
-
-/**
- * Policy rules for a specific resource.
- *
- * @category Curation Policy Manifest
- * @example
- * {
- *   "resourceSelector": "com.acme.finance:bank_failures",
- *   "rules": [
- *     { "type": "ACCESS", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }] },
- *     { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
- *     { "type": "OPERATIONAL", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
- *   ]
- * }
- */
-export interface ResourcePolicy {
-  /**
-   * Resource selector for which resources this policy applies.
-   *
-   * This is typed as `ResourceSelector`, which can be either:
-   * - An exact `ResourceId` (e.g. "com.acme.finance:bank_failures"), or
-   * - A wildcard selector where namespace and/or name can use `*`
-   *   (e.g. "com.acme.finance:*", "com.acme.*").
-   *
-   * Both namespace and name can use `*` (e.g. `com.acme.finance:*`, `com.acme.*`).
-   * @example "com.acme.finance:bank_failures"
-   * @example "com.acme.finance:*"
-   * @example "com.acme.*"
-   */
-  resourceSelector: ResourceSelector;
-
-  /**
-   * List of policy rules to apply to this resource.
-   * If omitted or empty, no special enforcements are applied for this resource.
-   */
-  rules?: PolicyRule[];
-}
+export type Policy = MandatoryFilterPolicy | OperationalPolicy | AccessPolicy;
 
 /**
  * Root structure for the policy manifest (policy.yaml).
@@ -651,13 +682,15 @@ export interface ResourcePolicy {
  * without mandatory filters or operational constraints. This is ideal for
  * development and testing scenarios.
  *
+ * Each policy in the list carries its own scope: `resourceId` for MANDATORY_FILTER and
+ * OPERATIONAL (exact resource only), `resourceSelector` for ACCESS (exact or wildcard).
+ *
  * @category Curation Policy Manifest
  * @example
- * // Full auto-discovery bootstrap mode - no policy enforcements
+ * // Bootstrap mode - no policy enforcements
  * {
  *   "version": "1.0.0"
  *   // No policies array needed - no special enforcements will be applied
- *   // All resources are accessible without restrictions
  * }
  * @example
  * // Empty policies - same as bootstrap mode
@@ -670,13 +703,9 @@ export interface ResourcePolicy {
  * {
  *   "version": "1.0.0",
  *   "policies": [
- *     {
- *       "resourceSelector": "com.acme.finance:bank_failures",
- *       "rules": [
- *         { "type": "MANDATORY_FILTER", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
- *         { "type": "OPERATIONAL", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
- *       ]
- *     }
+ *     { "type": "ACCESS", "resourceSelector": "com.acme.finance:bank_failures", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }] },
+ *     { "type": "MANDATORY_FILTER", "resourceId": "com.acme.finance:bank_failures", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
+ *     { "type": "OPERATIONAL", "resourceId": "com.acme.finance:bank_failures", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
  *   ]
  * }
  */
@@ -688,20 +717,12 @@ export interface PolicyManifest {
   version: string;
 
   /**
-   * List of resource policies.
+   * List of policies (rules). If omitted or empty, no special enforcements are applied.
    *
-   * **Bootstrap behavior**: If omitted or empty, no special enforcements are applied.
-   * Resources are accessible without:
-   * - Mandatory filters (no required predicates)
-   * - Operational constraints (no limits, no default sorting)
-   *
-   * This provides unrestricted access, ideal for:
-   * - Development and testing
-   * - Quick prototyping
-   * - Internal tools with trusted access
-   *
-   * For production use, explicitly define policies to enforce security, data governance,
-   * and access controls.
+   * **Bootstrap behavior**: Omit `policies` or use `policies: []` for unrestricted
+   * access (no mandatory filters, no operational constraints). For production,
+   * define policies to enforce security, data governance, and access controls.
+   * Each policy specifies its own scope (resourceId or resourceSelector).
    */
-  policies?: ResourcePolicy[];
+  policies?: Policy[];
 }
