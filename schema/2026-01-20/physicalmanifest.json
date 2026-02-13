@@ -20,14 +20,19 @@
           "$ref": "#/$defs/Record<string,unknown>",
           "description": "Additional metadata about the backend."
         },
+        "provider": {
+          "description": "Provider (implementation/variant) to distinguish backends with the same type.\nE.g. for type \"RDBMS\", provider may be \"postgresql\" or \"mysql\". Implementors\nuse this to select the correct driver or client.",
+          "type": "string"
+        },
         "type": {
           "$ref": "#/$defs/BackendType",
-          "description": "Type of backend."
+          "description": "Type of backend (category)."
         }
       },
       "required": [
         "config",
         "id",
+        "provider",
         "type"
       ],
       "type": "object"
