@@ -22,7 +22,6 @@ backends:
     config:
       type: "RDBMS"
       uri: "mysql://db.acme.com:3306/finance"
-      schema: "public"
     credentials:
       type: "env"
       key: "MYSQL_DB_PASSWORD"

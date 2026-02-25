@@ -124,7 +124,12 @@ export interface CredentialReference {
  */
 export interface RDBMSBackendConfig {
   /**
-   * Connection URI for the database.
+   * Connection URI for the database. For PostgreSQL, the format is:
+   * postgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
+   * For MySQL, the format is:
+   * mysql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
+   * For MySQL the dbname is optional in the uri and will be used as the default database.
+   *
    * @example "postgresql://db.acme.com:5432/finance"
    * @example "mysql://user@localhost:3306/mydb"
    */
@@ -132,6 +137,12 @@ export interface RDBMSBackendConfig {
 
   /**
    * Database schema name (optional).
+   * For PostgreSQL, the schema name is optional and will be used as the default schema.
+   * For MySQL, the schema name is not supported. If you need to specify a default DB, you
+   * can specify the dbname in the uri.
+   *
+   * @example "public"
+   * @example "finance"
    */
   schema?: string;
 
