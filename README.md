@@ -60,8 +60,6 @@ npm run format
 import {
   InitializeRequest,
   DiscoverRequest,
-  DescribeRequest,
-  ValidateRequest,
   ExecuteRequest,
 } from "./schema/2026-01-20/schema";
 
@@ -91,11 +89,11 @@ const executeReq: ExecuteRequest = {
   id: 3,
   method: "adp.execute",
   params: {
-    resourceId: "com.acme.finance:bank_failures",
     intent: {
       intentClass: "QUERY",
-      predicates: [{ field: "state_code", op: "EQ", value: "CA" }],
-      selection: ["bank_name", "closing_date"],
+      resourceId: "com.acme.finance:bank_failures",
+      predicates: { op: "AND", predicates: [{ fieldId: "state_code", op: "EQ", value: "CA" }] },
+      projections: ["bank_name", "closing_date"],
     },
   },
 };

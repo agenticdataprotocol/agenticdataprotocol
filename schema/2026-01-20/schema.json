@@ -315,16 +315,11 @@
         },
         "intent": {
           "$ref": "#/$defs/Intent",
-          "description": "The Intent to execute."
-        },
-        "resourceId": {
-          "description": "The resource to execute against.",
-          "type": "string"
+          "description": "The Intent to execute (includes resourceId)."
         }
       },
       "required": [
-        "intent",
-        "resourceId"
+        "intent"
       ],
       "type": "object"
     },
@@ -552,11 +547,16 @@
             "$ref": "#/$defs/Record<string,unknown>"
           },
           "type": "array"
+        },
+        "resourceId": {
+          "description": "The resource to operate on.",
+          "type": "string"
         }
       },
       "required": [
         "intentClass",
-        "payload"
+        "payload",
+        "resourceId"
       ],
       "type": "object"
     },
@@ -670,7 +670,7 @@
           "$ref": "#/$defs/ReviseIntent"
         }
       ],
-      "description": "The Intent structure used in VALIDATE and EXECUTE operations."
+      "description": "The Intent structure used in VALIDATE and EXECUTE operations.\n\n**Extensibility (multi-resource intents):** Current intents each have a single\n`resourceId`. Future intents (e.g. JOIN, CORRELATE) may need multiple resources.\nUse a separate field for that case (e.g. `resourceIds: ResourceId[]`) on the\nnew intent type. Implementors that need \"all resources for this intent\" should\nbranch on `intentClass` and read `resourceId` or the multi-resource field\naccordingly."
     },
     "IntentClass": {
       "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
@@ -833,11 +833,16 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "resourceId": {
+          "description": "The resource to operate on.",
+          "type": "string"
         }
       },
       "required": [
         "intentClass",
-        "key"
+        "key",
+        "resourceId"
       ],
       "type": "object"
     },
@@ -1094,11 +1099,16 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "resourceId": {
+          "description": "The resource to operate on.",
+          "type": "string"
         }
       },
       "required": [
         "intentClass",
-        "predicates"
+        "predicates",
+        "resourceId"
       ],
       "type": "object"
     },
@@ -1219,12 +1229,17 @@
         "predicates": {
           "$ref": "#/$defs/PredicateGroup",
           "description": "Predicates to identify the records to update."
+        },
+        "resourceId": {
+          "description": "The resource to operate on.",
+          "type": "string"
         }
       },
       "required": [
         "intentClass",
         "payload",
-        "predicates"
+        "predicates",
+        "resourceId"
       ],
       "type": "object"
     },
@@ -1368,16 +1383,11 @@
         },
         "intent": {
           "$ref": "#/$defs/Intent",
-          "description": "The Intent to validate."
-        },
-        "resourceId": {
-          "description": "The resource to validate against.",
-          "type": "string"
+          "description": "The Intent to validate (includes resourceId)."
         }
       },
       "required": [
-        "intent",
-        "resourceId"
+        "intent"
       ],
       "type": "object"
     },
