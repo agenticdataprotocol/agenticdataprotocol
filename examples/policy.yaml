@@ -120,10 +120,3 @@ policies:
   - type: "OPERATIONAL"
     resourceId: "com.acme.finance:sensitive_views"
     enforceLimit: 100
-
-# ============================================================================
-# Minimal Policy Example
-# ============================================================================
-# You can also define minimal manifests:
-# version: "1.0.0"
-# policies: []   # Empty list = no enforcements

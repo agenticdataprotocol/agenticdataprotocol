@@ -3,13 +3,30 @@
 
 version: "1.0.0"
 
-# No policies array needed!
-# When omitted or empty, no special enforcements are applied:
+# No policies array needed for MANDATORY_FILTER / OPERATIONAL:
 # - No mandatory filters (no required predicates)
 # - No operational constraints (no limits, no default sorting)
-# - All resources are accessible without restrictions
+# ACCESS remains closed-by-default: without an ACCESS rule, no roles/intents
+# are allowed for a given resource. See the default ACCESS example below for an
+# "open" bootstrap configuration.
 #
 # This is ideal for:
 # - Development and testing
 # - Quick prototyping
 # - Internal tools with trusted access
+#
+# The following manifest shows an explicit "default allow" ACCESS rule that
+# opens up all resources to a `default* role.
+# Adjust the namespace and role name to match your environment.
+#
+policies:
+  - type: "ACCESS"
+    # Catch-all ACCESS rule for all resources.
+    # Replace "*" with your own resource selector.
+    resourceSelector: "*"
+    roles:
+      # The default role is used for callers who should have unrestricted
+      # access in development / test environments.
+      - role: default
+        # "*" means all intent classes are allowed for this role.
+        allowedIntents: ["*"]

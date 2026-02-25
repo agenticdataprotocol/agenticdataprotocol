@@ -457,8 +457,8 @@ export type PolicyCondition = string;
 /**
  * `ResourceSelector` is used in policy matching to select resources.
  *
- * **Grammar (string form)** — wildcard `*` may appear **only once** and **only
- * as the final token**. Supported shapes are:
+ * **Grammar (string form)** — wildcard `*` may appear **only once** and, when
+ * present, MUST appear as the final token. Supported shapes are:
  * - **Exact**: `"namespace:name"` — matches a single `ResourceId`
  *   (e.g. `"com.acme.finance:bank_failures"`). No `*` allowed.
  * - **All names in one namespace**: `"namespace:*"` — matches all resources
@@ -466,7 +466,11 @@ export type PolicyCondition = string;
  *   (e.g. `"com.acme.finance:*"`).
  * - **Namespace prefix (no colon)**: `"namespace.*"` — matches all resources
  *   whose namespace starts with `namespace.` and any name
- *   (e.g. `"com.acme.*"`, `"com.acme.finance.*"`).
+ *   (e.g. `"com.acme.*"`, `"com.acme.finance.*"`). But, it does not match resources
+ *   in the com.acme namespace itself — use "com.acme:*" for that
+ * - **Global**: `"*"` — matches **all** resources, regardless of namespace or
+ *   name. This is useful for bootstrap-style default ACCESS rules (see
+ *   `examples/policy-bootstrap.yaml`).
  *
  * Disallowed examples:
  * - `"a*"` or `"a.b*"` (wildcard inside a segment)
@@ -475,7 +479,8 @@ export type PolicyCondition = string;
  *
  * **Relationship to `ResourceId`**:
  * - `ResourceId` is always a concrete `namespace:name` identifier with **no wildcards**.
- * - `ResourceSelector` may be an exact `ResourceId`, or one of the wildcard forms above.
+ * - `ResourceSelector` may be an exact `ResourceId`, `"*"`, or one of the wildcard
+ *   forms above.
  *
  * @category Curation Policy Manifest
  */
@@ -631,6 +636,26 @@ export interface RoleAccessEntry {
  * After this resolution/merge, the resulting effective `roles` set is used
  * to decide if a given `(role, intentClass)` is allowed.
  *
+ * **Default behavior when no ACCESS policy matches (closed-by-default)**
+ *
+ * If, after step 1 above, the set of ACCESS policies whose `resourceSelector`
+ * matches a given concrete `ResourceId` is **empty**, runtimes MUST treat the
+ * effective `roles` set for that resource as empty:
+ *
+ * - No `(role, intentClass)` pair is allowed by ACCESS for that resource.
+ * - There is **no implicit fallback** that grants access when no ACCESS policy
+ *   matches; lack of a match means "no access".
+ *
+ * This applies regardless of whether the manifest defines ACCESS policies for
+ * other resources. ACCESS therefore behaves as a **closed-by-default gate**:
+ * you must opt resources in by defining at least one matching ACCESS rule.
+ *
+ * For development or bootstrap scenarios that require open-by-default behavior,
+ * manifests SHOULD define an explicit catch-all ACCESS rule (for example,
+ * `"resourceSelector": "*"` or an org-scoped selector such as `"com.acme.*"`)
+ * that allows the desired roles and intent classes, as illustrated in
+ * `examples/policy-bootstrap.yaml`.
+ *
  * @category Curation Policy Manifest
  * @example
  * {
@@ -677,26 +702,45 @@ export type Policy = MandatoryFilterPolicy | OperationalPolicy | AccessPolicy;
 /**
  * Root structure for the policy manifest (policy.yaml).
  *
- * **Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.
- * When omitted or empty, no special enforcements are applied - resources are accessible
- * without mandatory filters or operational constraints. This is ideal for
- * development and testing scenarios.
+ * **Bootstrap Mode (no policies)**: For the simplest setup, you can omit the
+ * `policies` array entirely. When omitted or empty, no special enforcements are
+ * applied for MANDATORY_FILTER or OPERATIONAL (no required predicates, no limits,
+ * no default sorting). ACCESS remains **closed-by-default**: if no ACCESS rule
+ * matches a given resource, that resource has no ACCESS permissions.
  *
  * Each policy in the list carries its own scope: `resourceId` for MANDATORY_FILTER and
  * OPERATIONAL (exact resource only), `resourceSelector` for ACCESS (exact or wildcard).
  *
  * @category Curation Policy Manifest
  * @example
- * // Bootstrap mode - no policy enforcements
+ * // Bootstrap mode - no policy enforcements for MANDATORY_FILTER / OPERATIONAL.
+ * // ACCESS stays closed-by-default (no ACCESS rule => no access for that resource).
  * {
  *   "version": "1.0.0"
- *   // No policies array needed - no special enforcements will be applied
+ *   // No policies array needed.
  * }
  * @example
- * // Empty policies - same as bootstrap mode
+ * // Empty policies - same as bootstrap mode above
  * {
  *   "version": "1.0.0",
  *   "policies": []
+ * }
+ * @example
+ * // Bootstrap mode with explicit default ACCESS allow rule (see policy-bootstrap.yaml)
+ * {
+ *   "version": "1.0.0",
+ *   "policies": [
+ *     {
+ *       "type": "ACCESS",
+ *       "resourceSelector": "*",
+ *       "roles": [
+ *         {
+ *           "role": "public",
+ *           "allowedIntents": ["*"]
+ *         }
+ *       ]
+ *     }
+ *   ]
  * }
  * @example
  * // Full manual definition with policy rules
@@ -717,12 +761,25 @@ export interface PolicyManifest {
   version: string;
 
   /**
-   * List of policies (rules). If omitted or empty, no special enforcements are applied.
+   * List of policies (rules). If omitted or empty, no special enforcements are applied
+   * for MANDATORY_FILTER and OPERATIONAL (no required predicates, no limits, no
+   * default sorting).
    *
-   * **Bootstrap behavior**: Omit `policies` or use `policies: []` for unrestricted
-   * access (no mandatory filters, no operational constraints). For production,
-   * define policies to enforce security, data governance, and access controls.
-   * Each policy specifies its own scope (resourceId or resourceSelector).
+   * **ACCESS and default semantics**: ACCESS policies are evaluated per-resource using
+   * the resolution algorithm described on `AccessPolicy`. If, for a given concrete
+   * `ResourceId`, no ACCESS policy's `resourceSelector` matches, runtimes MUST treat
+   * the effective ACCESS roles for that resource as empty (no roles or intent classes
+   * are permitted). There is no implicit "allow if no ACCESS rule matches" fallback.
+   *
+   * **Bootstrap behavior**: For development and testing, manifests MAY define an
+   * explicit "default allow" ACCESS rule (for example, a catch-all selector such as
+   * `"*"` that grants `"*"` intents to a default role) to simulate
+   * open-by-default behavior while still following the closed-by-default ACCESS
+   * semantics. See `examples/policy-bootstrap.yaml` for a reference layout.
+   *
+   * For production, define targeted policies to enforce security, data governance,
+   * and access controls. Each policy specifies its own scope (resourceId or
+   * resourceSelector).
    */
   policies?: Policy[];
 }
