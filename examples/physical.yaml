@@ -4,8 +4,9 @@ version: "1.0.0"
 
 backends:
   # RDBMS Backend - PostgreSQL database
-  - id: "finance_sql"
+  - id: "finance_sql_pg"
     type: "RDBMS"
+    provider: "postgresql"
     config:
       type: "RDBMS"
       uri: "postgresql://db.acme.com:5432/finance"
@@ -14,9 +15,21 @@ backends:
       type: "env"
       key: "DB_PASSWORD"
 
-  # Vector Database Backend - Pinecone
+  # RDBMS Backend - MySQL database (same type, different provider)
+  - id: "finance_sql_mysql"
+    type: "RDBMS"
+    provider: "mysql"
+    config:
+      type: "RDBMS"
+      uri: "mysql://db.acme.com:3306/finance"
+    credentials:
+      type: "env"
+      key: "MYSQL_DB_PASSWORD"
+
+  # Vector Database Backend - Pinecone (provider distinguishes from Weaviate, etc.)
   - id: "report_vectors"
     type: "VECTOR"
+    provider: "pinecone"
     config:
       type: "VECTOR"
       provider: "PINECONE"
@@ -27,9 +40,10 @@ backends:
       manager: "AWS_SECRETS_MANAGER"
       key: "production/pinecone-api-key"
 
-  # S3 Object Storage Backend
+  # S3 Object Storage Backend (provider distinguishes AWS S3 from MinIO, etc.)
   - id: "raw_storage"
     type: "S3"
+    provider: "s3"
     config:
       type: "S3"
       uri: "s3://acme-finance-datalake/"
@@ -39,9 +53,10 @@ backends:
       manager: "AWS_SECRETS_MANAGER"
       key: "production/s3-credentials"
 
-  # NoSQL Backend - MongoDB
+  # NoSQL Backend - MongoDB (provider distinguishes from DynamoDB, etc.)
   - id: "analytics_nosql"
     type: "NOSQL"
+    provider: "mongodb"
     config:
       type: "NOSQL"
       uri: "mongodb://mongo.acme.com:27017/analytics"
@@ -49,9 +64,10 @@ backends:
       type: "env"
       key: "MONGO_PASSWORD"
 
-  # Graph Database Backend - Neo4j
+  # Graph Database Backend - Neo4j (provider distinguishes from other graph backends)
   - id: "graph_db"
     type: "GRAPH"
+    provider: "neo4j"
     config:
       type: "GRAPH"
       uri: "neo4j://graph.acme.com:7687"

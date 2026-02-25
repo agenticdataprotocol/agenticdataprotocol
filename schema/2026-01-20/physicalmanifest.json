@@ -20,14 +20,19 @@
           "$ref": "#/$defs/Record<string,unknown>",
           "description": "Additional metadata about the backend."
         },
+        "provider": {
+          "description": "Provider (implementation/variant) to distinguish backends with the same type.\nE.g. for type \"RDBMS\", provider may be \"postgresql\" or \"mysql\". Implementors\nuse this to select the correct driver or client.",
+          "type": "string"
+        },
         "type": {
           "$ref": "#/$defs/BackendType",
-          "description": "Type of backend."
+          "description": "Type of backend (category)."
         }
       },
       "required": [
         "config",
         "id",
+        "provider",
         "type"
       ],
       "type": "object"
@@ -162,11 +167,11 @@
           "description": "Additional properties for the RDBMS backend."
         },
         "schema": {
-          "description": "Database schema name (optional).",
+          "description": "Database schema name (optional).\nFor PostgreSQL, the schema name is optional and will be used as the default schema.\nFor MySQL, the schema name is not supported. If you need to specify a default DB, you\ncan specify the dbname in the uri.",
           "type": "string"
         },
         "uri": {
-          "description": "Connection URI for the database.",
+          "description": "Connection URI for the database. For PostgreSQL, the format is:\npostgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]\nFor MySQL, the format is:\nmysql://[user[:password]@][host][:port][/dbname][?param1=value1&...]\nFor MySQL the dbname is optional in the uri and will be used as the default database.",
           "type": "string"
         }
       },

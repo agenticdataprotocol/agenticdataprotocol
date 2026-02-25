@@ -33,6 +33,24 @@ export type BackendType =
   | "NOSQL" // NoSQL databases (MongoDB, DynamoDB, etc.)
   | "GRAPH"; // Graph databases (Neo4j, etc.)
 
+/**
+ * Backend provider (implementation/variant) within a type.
+ * Used to distinguish concrete backends when `type` alone is ambiguous
+ * (e.g. RDBMS could be PostgreSQL, MySQL, etc.).
+ *
+ * Suggested values by type:
+ * - RDBMS: "postgresql", "mysql", "sqlite", "oracle", "mssql", etc.
+ * - VECTOR: "pinecone", "weaviate", "qdrant", "milvus", etc.
+ * - S3: "s3", "minio", "gcs" (S3-compatible), etc.
+ * - NOSQL: "mongodb", "dynamodb", "cassandra", etc.
+ * - GRAPH: "neo4j", "janusgraph", etc.
+ *
+ * Implementors use this to select the correct driver or client.
+ *
+ * @category Curation Physical Manifest
+ */
+export type BackendProvider = string;
+
 /* ============================================================================
  * Physical Manifest Types
  * ============================================================================ */
@@ -106,7 +124,12 @@ export interface CredentialReference {
  */
 export interface RDBMSBackendConfig {
   /**
-   * Connection URI for the database.
+   * Connection URI for the database. For PostgreSQL, the format is:
+   * postgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
+   * For MySQL, the format is:
+   * mysql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
+   * For MySQL the dbname is optional in the uri and will be used as the default database.
+   *
    * @example "postgresql://db.acme.com:5432/finance"
    * @example "mysql://user@localhost:3306/mydb"
    */
@@ -114,6 +137,12 @@ export interface RDBMSBackendConfig {
 
   /**
    * Database schema name (optional).
+   * For PostgreSQL, the schema name is optional and will be used as the default schema.
+   * For MySQL, the schema name is not supported. If you need to specify a default DB, you
+   * can specify the dbname in the uri.
+   *
+   * @example "public"
+   * @example "finance"
    */
   schema?: string;
 
@@ -194,6 +223,7 @@ export type BackendConfig =
  * {
  *   "id": "finance_sql",
  *   "type": "RDBMS",
+ *   "provider": "postgresql",
  *   "config": {
  *     "type": "RDBMS",
  *     "uri": "postgresql://db.acme.com:5432/finance"
@@ -209,9 +239,16 @@ export interface Backend {
   id: string;
 
   /**
-   * Type of backend.
+   * Type of backend (category).
    */
   type: BackendType;
+
+  /**
+   * Provider (implementation/variant) to distinguish backends with the same type.
+   * E.g. for type "RDBMS", provider may be "postgresql" or "mysql". Implementors
+   * use this to select the correct driver or client.
+   */
+  provider: BackendProvider;
 
   /**
    * Backend-specific configuration.
@@ -240,6 +277,7 @@ export interface Backend {
  *     {
  *       "id": "finance_sql",
  *       "type": "RDBMS",
+ *       "provider": "postgresql",
  *       "config": {
  *         "type": "RDBMS",
  *         "uri": "postgresql://db.acme.com:5432/finance"
