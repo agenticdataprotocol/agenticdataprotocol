@@ -1,11 +1,49 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
-    "MandatoryFilterRule": {
-      "description": "Mandatory filter rule that enforces required predicates.",
+    "AccessPolicy": {
+      "description": "RBAC-style access policy: restricts which roles can use which intent classes.\nEach ACCESS policy declares which resources it applies to via required\n`resourceSelector`, which uses the `ResourceSelector` grammar:\n- Exact resource ID (e.g. `\"com.acme.finance:bank_failures\"`), or\n- Wildcard pattern with `*` only as the final token, such as\n  `\"com.acme.finance:*\"`, `\"com.acme.*\"`, or `\"com.acme.finance.*\"`.\n\n**Deterministic resolution when multiple ACCESS policies match**\n\nMultiple ACCESS policies may match the same concrete `ResourceId` via overlapping\nselectors (for example, `\"com.acme.*\"` and `\"com.acme.finance:*\"`). Runtimes\nMUST resolve them deterministically as follows:\n\n1. Compute the set of ACCESS policies whose `resourceSelector` matches the\n   target `ResourceId`.\n2. For each matching selector, compute a specificity rank:\n   - Highest: exact `namespace:name`\n   - Next: exact-namespace wildcard name (`namespace:*`)\n   - Lowest: namespace-prefix forms (`namespace.*`, `namespace.sub.*`), where\n     longer namespaces are more specific than shorter ones.\n3. Discard any ACCESS policies whose selector has lower specificity than the\n   maximum rank among matches.\n4. From the remaining ACCESS policies (all with equal, highest specificity),\n   merge `roles` deterministically:\n   - For each role, take the **union** of `allowedIntents` across policies,\n     de-duplicating values.\n   - If any `allowedIntents` for a role contains `\"*\"`, treat that as\n     \"all intent classes\" for that role regardless of other entries.\n\nAfter this resolution/merge, the resulting effective `roles` set is used\nto decide if a given `(role, intentClass)` is allowed.\n\n**Default behavior when no ACCESS policy matches (closed-by-default)**\n\nIf, after step 1 above, the set of ACCESS policies whose `resourceSelector`\nmatches a given concrete `ResourceId` is **empty**, runtimes MUST treat the\neffective `roles` set for that resource as empty:\n\n- No `(role, intentClass)` pair is allowed by ACCESS for that resource.\n- There is **no implicit fallback** that grants access when no ACCESS policy\n  matches; lack of a match means \"no access\".\n\nThis applies regardless of whether the manifest defines ACCESS policies for\nother resources. ACCESS therefore behaves as a **closed-by-default gate**:\nyou must opt resources in by defining at least one matching ACCESS rule.\n\nFor development or bootstrap scenarios that require open-by-default behavior,\nmanifests SHOULD define an explicit catch-all ACCESS rule (for example,\n`\"resourceSelector\": \"*\"` or an org-scoped selector such as `\"com.acme.*\"`)\nthat allows the desired roles and intent classes, as illustrated in\n`examples/policy-bootstrap.yaml`.",
+      "properties": {
+        "resourceSelector": {
+          "description": "Resource selector for which resources this policy applies (exact resource ID\nor wildcard, e.g. com.acme.finance:* or com.acme.*).",
+          "type": "string"
+        },
+        "roles": {
+          "description": "List of role-to-allowed-intents mappings.\nRequest is allowed only if the current role is listed and the intent class\nis in that role's allowedIntents (and the resource supports the intent).",
+          "items": {
+            "$ref": "#/$defs/RoleAccessEntry"
+          },
+          "type": "array"
+        },
+        "type": {
+          "const": "ACCESS",
+          "description": "Type of policy.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "resourceSelector",
+        "roles",
+        "type"
+      ],
+      "type": "object"
+    },
+    "IntentClass": {
+      "description": "READ operations:\n- `LOOKUP` - Retrieve a single entity by unique key\n- `QUERY` - Retrieve a set of entities using boolean predicates\n\nWRITE operations:\n- `INGEST` - Create or append new data entries\n- `REVISE` - Update existing entries (full or partial)",
+      "enum": [
+        "*",
+        "INGEST",
+        "LOOKUP",
+        "QUERY",
+        "REVISE"
+      ],
+      "type": "string"
+    },
+    "MandatoryFilterPolicy": {
+      "description": "Mandatory filter policy that enforces required predicates.\nApplies to exactly one resource; `resourceId` is required and must be an\nexact resource ID (no wildcards). `fieldId` is interpreted against that\nresource's schema.",
       "properties": {
         "condition": {
-          "description": "Optional condition for when this rule applies.",
+          "description": "Optional condition for when this policy applies.",
           "type": "string"
         },
         "fieldId": {
@@ -16,9 +54,13 @@
           "$ref": "#/$defs/PredicateOperator",
           "description": "Operator for the mandatory filter."
         },
+        "resourceId": {
+          "description": "Resource ID (exact) this policy applies to. `fieldId` is interpreted against\nthis resource's schema. No wildcards.",
+          "type": "string"
+        },
         "type": {
           "const": "MANDATORY_FILTER",
-          "description": "Type of policy rule.",
+          "description": "Type of policy.",
           "type": "string"
         },
         "value": {
@@ -47,16 +89,17 @@
       "required": [
         "fieldId",
         "op",
+        "resourceId",
         "type",
         "value"
       ],
       "type": "object"
     },
-    "OperationalRule": {
-      "description": "Operational constraints for resource access.",
+    "OperationalPolicy": {
+      "description": "Operational policy that applies constraints for resource access.\nApplies to exactly one resource; `resourceId` is required and must be an\nexact resource ID (no wildcards). `defaultOrderBy` is interpreted against\nthat resource's schema.",
       "properties": {
         "condition": {
-          "description": "Optional condition for when this rule applies.",
+          "description": "Optional condition for when this policy applies.",
           "type": "string"
         },
         "defaultOrderBy": {
@@ -67,27 +110,35 @@
           "description": "Maximum number of results to return (enforced limit).",
           "type": "integer"
         },
+        "resourceId": {
+          "description": "Resource ID (exact) this policy applies to. `defaultOrderBy` is interpreted\nagainst this resource's schema. No wildcards.",
+          "type": "string"
+        },
         "type": {
           "const": "OPERATIONAL",
-          "description": "Type of policy rule.",
+          "description": "Type of policy.",
           "type": "string"
         }
       },
       "required": [
+        "resourceId",
         "type"
       ],
       "type": "object"
     },
-    "PolicyRule": {
+    "Policy": {
       "anyOf": [
         {
-          "$ref": "#/$defs/MandatoryFilterRule"
+          "$ref": "#/$defs/MandatoryFilterPolicy"
         },
         {
-          "$ref": "#/$defs/OperationalRule"
+          "$ref": "#/$defs/OperationalPolicy"
+        },
+        {
+          "$ref": "#/$defs/AccessPolicy"
         }
       ],
-      "description": "Union type for all policy rule types.\n\nSupported rule types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)"
+      "description": "Union type for all policy types (each appears as a rule in the manifest).\n\nSupported policy types:\n- MANDATORY_FILTER: Enforces required predicates that must be included in queries\n- OPERATIONAL: Applies operational constraints (limits, default sorting)\n- ACCESS: Role-based allowed intents per resource (RBAC)"
     },
     "PredicateOperator": {
       "description": "Operators supported for predicate expressions.",
@@ -106,23 +157,24 @@
       ],
       "type": "string"
     },
-    "ResourcePolicy": {
-      "description": "Policy rules for a specific resource.",
+    "RoleAccessEntry": {
+      "description": "Role-to-intents mapping for RBAC access control.\nDefines which intent classes a role is allowed to use on the resource.",
       "properties": {
-        "resourceId": {
-          "description": "Resource identifier for which these policies apply.",
-          "type": "string"
-        },
-        "rules": {
-          "description": "List of policy rules to apply to this resource.\nIf omitted or empty, no special enforcements are applied for this resource.",
+        "allowedIntents": {
+          "description": "Intent classes this role is allowed to use on the resource.\nUse \"*\" to allow all intent classes for this role.",
           "items": {
-            "$ref": "#/$defs/PolicyRule"
+            "$ref": "#/$defs/IntentClass"
           },
           "type": "array"
+        },
+        "role": {
+          "description": "Role identifier (e.g. \"admin\", \"user\").\nThe runtime supplies the current role from auth/session when evaluating access.",
+          "type": "string"
         }
       },
       "required": [
-        "resourceId"
+        "allowedIntents",
+        "role"
       ],
       "type": "object"
     },
@@ -149,12 +201,12 @@
       "type": "object"
     }
   },
-  "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode**: For the simplest setup, you can omit the `policies` array entirely.\nWhen omitted or empty, no special enforcements are applied - resources are accessible\nwithout mandatory filters or operational constraints. This is ideal for\ndevelopment and testing scenarios.",
+  "description": "Root structure for the policy manifest (policy.yaml).\n\n**Bootstrap Mode (no policies)**: For the simplest setup, you can omit the\n`policies` array entirely. When omitted or empty, no special enforcements are\napplied for MANDATORY_FILTER or OPERATIONAL (no required predicates, no limits,\nno default sorting). ACCESS remains **closed-by-default**: if no ACCESS rule\nmatches a given resource, that resource has no ACCESS permissions.\n\nEach policy in the list carries its own scope: `resourceId` for MANDATORY_FILTER and\nOPERATIONAL (exact resource only), `resourceSelector` for ACCESS (exact or wildcard).",
   "properties": {
     "policies": {
-      "description": "List of resource policies.\n\n**Bootstrap behavior**: If omitted or empty, no special enforcements are applied.\nResources are accessible without:\n- Mandatory filters (no required predicates)\n- Operational constraints (no limits, no default sorting)\n\nThis provides unrestricted access, ideal for:\n- Development and testing\n- Quick prototyping\n- Internal tools with trusted access\n\nFor production use, explicitly define policies to enforce security, data governance,\nand access controls.",
+      "description": "List of policies (rules). If omitted or empty, no special enforcements are applied\nfor MANDATORY_FILTER and OPERATIONAL (no required predicates, no limits, no\ndefault sorting).\n\n**ACCESS and default semantics**: ACCESS policies are evaluated per-resource using\nthe resolution algorithm described on `AccessPolicy`. If, for a given concrete\n`ResourceId`, no ACCESS policy's `resourceSelector` matches, runtimes MUST treat\nthe effective ACCESS roles for that resource as empty (no roles or intent classes\nare permitted). There is no implicit \"allow if no ACCESS rule matches\" fallback.\n\n**Bootstrap behavior**: For development and testing, manifests MAY define an\nexplicit \"default allow\" ACCESS rule (for example, a catch-all selector such as\n`\"*\"` that grants `\"*\"` intents to a default role) to simulate\nopen-by-default behavior while still following the closed-by-default ACCESS\nsemantics. See `examples/policy-bootstrap.yaml` for a reference layout.\n\nFor production, define targeted policies to enforce security, data governance,\nand access controls. Each policy specifies its own scope (resourceId or\nresourceSelector).",
       "items": {
-        "$ref": "#/$defs/ResourcePolicy"
+        "$ref": "#/$defs/Policy"
       },
       "type": "array"
     },

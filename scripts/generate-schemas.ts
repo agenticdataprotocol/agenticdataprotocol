@@ -52,7 +52,10 @@ function fixDraft07TupleKeywords(node: unknown): void {
 
   const obj = node as Record<string, unknown>;
 
-  if (Array.isArray((obj as any).items) && Object.prototype.hasOwnProperty.call(obj, "additionalItems")) {
+  if (
+    Array.isArray((obj as any).items) &&
+    Object.prototype.hasOwnProperty.call(obj, "additionalItems")
+  ) {
     const itemsArray = (obj as any).items as unknown[];
     const additional = (obj as any).additionalItems;
 
