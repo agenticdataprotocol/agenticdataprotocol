@@ -1282,11 +1282,18 @@
         },
         "threshold": {
           "description": "Similarity threshold (0.0 to 1.0).",
-          "type": "integer"
+          "type": "number"
         },
         "top": {
           "description": "Maximum number of results to return.",
           "type": "integer"
+        },
+        "vector": {
+          "description": "Pre-computed embedding vector for direct vector similarity search.",
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
         }
       },
       "type": "object"
