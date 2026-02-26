@@ -37,6 +37,7 @@ function applyJsonSchema202012Transformations(schemaPath: string): void {
 
   const schema = JSON.parse(content);
   fixDraft07TupleKeywords(schema);
+  fixIntegerArrayItems(schema);
 
   writeFileSync(schemaPath, JSON.stringify(schema, null, 2) + "\n", "utf-8");
 }
@@ -80,6 +81,30 @@ function fixDraft07TupleKeywords(node: unknown): void {
 }
 
 /**
+ * Fix array types annotated with `@TJS-type number[]`.
+ *
+ * The `@TJS-type number[]` annotation produces `{type: "number[]"}` which is
+ * not valid JSON Schema. This converts it to the correct representation:
+ * `{type: "array", items: {type: "number"}}`.
+ */
+function fixIntegerArrayItems(node: unknown): void {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (obj.type === "number[]") {
+    obj.type = "array";
+    obj.items = { type: "number" };
+  }
+
+  for (const value of Object.values(obj)) {
+    fixIntegerArrayItems(value);
+  }
+}
+
+/**
  * Generate JSON schema for a specific type from a TypeScript file
  */
 async function generateTypeSchema(
@@ -109,6 +134,7 @@ async function generateTypeSchema(
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
       const parsed = JSON.parse(expectedSchema);
       fixDraft07TupleKeywords(parsed);
+      fixIntegerArrayItems(parsed);
       expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare
@@ -174,6 +200,7 @@ async function generateSchema(
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
       const parsed = JSON.parse(expectedSchema);
       fixDraft07TupleKeywords(parsed);
+      fixIntegerArrayItems(parsed);
       expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare

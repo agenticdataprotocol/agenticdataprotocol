@@ -262,6 +262,13 @@ export interface SimilarValue {
   text?: string;
 
   /**
+   * Pre-computed embedding vector for direct vector similarity search.
+   *
+   * @TJS-type number[]
+   */
+  vector?: number[];
+
+  /**
    * Binary content as Base64 or URI reference.
    */
   blob?: string;
@@ -273,6 +280,8 @@ export interface SimilarValue {
 
   /**
    * Similarity threshold (0.0 to 1.0).
+   *
+   * @TJS-type number
    */
   threshold?: number;
 
