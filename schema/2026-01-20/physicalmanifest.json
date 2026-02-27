@@ -219,15 +219,10 @@
         "indexName": {
           "description": "Index or collection name.",
           "type": "string"
-        },
-        "provider": {
-          "description": "Vector database provider.",
-          "type": "string"
         }
       },
       "required": [
-        "indexName",
-        "provider"
+        "indexName"
       ],
       "type": "object"
     }

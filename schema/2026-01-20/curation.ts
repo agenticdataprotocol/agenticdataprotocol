@@ -160,12 +160,6 @@ export interface RDBMSBackendConfig {
  */
 export interface VectorBackendConfig {
   /**
-   * Vector database provider.
-   * @example "PINECONE", "WEAVIATE", "QDRANT"
-   */
-  provider: string;
-
-  /**
    * Index or collection name.
    */
   indexName: string;

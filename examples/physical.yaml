@@ -32,7 +32,6 @@ backends:
     provider: "pinecone"
     config:
       type: "VECTOR"
-      provider: "PINECONE"
       indexName: "bank-summaries"
       endpoint: "https://api.pinecone.io"
     credentials:
