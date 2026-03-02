@@ -504,7 +504,7 @@
           "description": "The value to compare against. Should be a single value (not an array).",
           "type": [
             "string",
-            "integer",
+            "number",
             "boolean"
           ]
         }
@@ -948,7 +948,7 @@
               "items": {
                 "type": [
                   "string",
-                  "integer",
+                  "number",
                   "boolean"
                 ]
               },
@@ -957,7 +957,7 @@
             {
               "type": [
                 "string",
-                "integer",
+                "number",
                 "boolean"
               ]
             }
@@ -1290,10 +1290,10 @@
         },
         "vector": {
           "description": "Pre-computed embedding vector for direct vector similarity search.",
-          "type": "array",
           "items": {
             "type": "number"
-          }
+          },
+          "type": "array"
         }
       },
       "type": "object"
