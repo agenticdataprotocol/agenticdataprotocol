@@ -264,7 +264,7 @@ export interface SimilarValue {
   /**
    * Pre-computed embedding vector for direct vector similarity search.
    *
-   * @TJS-type number[]
+   * @numberType number
    */
   vector?: number[];
 
@@ -281,7 +281,7 @@ export interface SimilarValue {
   /**
    * Similarity threshold (0.0 to 1.0).
    *
-   * @TJS-type number
+   * @numberType number
    */
   threshold?: number;
 
@@ -311,6 +311,8 @@ export interface Predicate {
    * The value to compare against.
    * For SIMILAR operator, this should be a SimilarValue object.
    * For other operators, this can be a primitive value or array of primitives.
+   *
+   * @numberType number
    */
   value:
     | string
@@ -339,6 +341,8 @@ export interface IdentityPredicate {
 
   /**
    * The value to compare against. Should be a single value (not an array).
+   *
+   * @numberType number
    */
   value: string | number | boolean;
 }

@@ -37,7 +37,7 @@ function applyJsonSchema202012Transformations(schemaPath: string): void {
 
   const schema = JSON.parse(content);
   fixDraft07TupleKeywords(schema);
-  fixIntegerArrayItems(schema);
+  fixNumberTypeAnnotation(schema);
 
   writeFileSync(schemaPath, JSON.stringify(schema, null, 2) + "\n", "utf-8");
 }
@@ -81,26 +81,47 @@ function fixDraft07TupleKeywords(node: unknown): void {
 }
 
 /**
- * Fix array types annotated with `@TJS-type number[]`.
+ * Fix `"integer"` to `"number"` in schema nodes annotated with `@numberType number`.
  *
- * The `@TJS-type number[]` annotation produces `{type: "number[]"}` which is
- * not valid JSON Schema. This converts it to the correct representation:
- * `{type: "array", items: {type: "number"}}`.
+ * When `--defaultNumberType integer` is used, TypeScript `number` is converted
+ * to `"integer"` in JSON Schema. The `@numberType number` annotation (via
+ * `--validationKeywords`) marks properties where the numeric type should remain
+ * `"number"`. This function recursively walks the schema tree, and for any node
+ * containing `"numberType": "number"`, replaces `"integer"` with `"number"` in
+ * that subtree and removes the marker.
  */
-function fixIntegerArrayItems(node: unknown): void {
+function fixNumberTypeAnnotation(node: unknown): void {
   if (!node || typeof node !== "object") {
     return;
   }
 
   const obj = node as Record<string, unknown>;
 
-  if (obj.type === "number[]") {
-    obj.type = "array";
-    obj.items = { type: "number" };
+  if (obj.numberType === "number") {
+    delete obj.numberType;
+    replaceIntegerWithNumber(obj);
   }
 
   for (const value of Object.values(obj)) {
-    fixIntegerArrayItems(value);
+    fixNumberTypeAnnotation(value);
+  }
+}
+
+function replaceIntegerWithNumber(node: unknown): void {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (Array.isArray(obj.type)) {
+    obj.type = obj.type.map((t: unknown) => (t === "integer" ? "number" : t));
+  } else if (obj.type === "integer") {
+    obj.type = "number";
+  }
+
+  for (const value of Object.values(obj)) {
+    replaceIntegerWithNumber(value);
   }
 }
 
@@ -120,7 +141,7 @@ async function generateTypeSchema(
     // Generate schema to stdout and capture it
     try {
       const { stdout: generated } = await execAsync(
-        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}"`,
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}" --validationKeywords numberType`,
       );
 
       let expectedSchema = generated;
@@ -134,7 +155,7 @@ async function generateTypeSchema(
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
       const parsed = JSON.parse(expectedSchema);
       fixDraft07TupleKeywords(parsed);
-      fixIntegerArrayItems(parsed);
+      fixNumberTypeAnnotation(parsed);
       expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare
@@ -153,7 +174,7 @@ async function generateTypeSchema(
     // Run typescript-json-schema
     try {
       await execAsync(
-        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}" -o "${outputPath}"`,
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${tsFile}" "${typeName}" --validationKeywords numberType -o "${outputPath}"`,
       );
     } catch (error) {
       console.error(`Failed to generate schema for ${typeName}`);
@@ -186,7 +207,7 @@ async function generateSchema(
     // Generate schema to stdout and capture it
     try {
       const { stdout: generated } = await execAsync(
-        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${schemaTs}" "*"`,
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${schemaTs}" "*" --validationKeywords numberType`,
       );
 
       let expectedSchema = generated;
@@ -200,7 +221,7 @@ async function generateSchema(
       expectedSchema = expectedSchema.replace(/#\/definitions\//g, "#/$defs/");
       const parsed = JSON.parse(expectedSchema);
       fixDraft07TupleKeywords(parsed);
-      fixIntegerArrayItems(parsed);
+      fixNumberTypeAnnotation(parsed);
       expectedSchema = JSON.stringify(parsed, null, 2) + "\n";
 
       // Compare
@@ -219,7 +240,7 @@ async function generateSchema(
     // Run typescript-json-schema
     try {
       await execAsync(
-        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${schemaTs}" "*" -o "${schemaJson}"`,
+        `npx typescript-json-schema --defaultNumberType integer --required --skipLibCheck --strictNullChecks "${schemaTs}" "*" --validationKeywords numberType -o "${schemaJson}"`,
       );
     } catch (error) {
       console.error(`Failed to generate schema for ${version}`);
