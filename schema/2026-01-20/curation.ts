@@ -30,7 +30,8 @@ import type {
 export type BackendType =
   | "RDBMS" // Relational databases (PostgreSQL, MySQL, etc.)
   | "VECTOR" // Vector databases (Pinecone, Weaviate, etc.)
-  | "S3" // Object storage (AWS S3, MinIO, etc.)
+  | "OBJECT_STORAGE" // Object storage (AWS S3, MinIO, etc.)
+  | "FILE_SYSTEM" // File systems (local, NFS, HDFS, etc.)
   | "NOSQL" // NoSQL databases (MongoDB, DynamoDB, etc.)
   | "GRAPH"; // Graph databases (Neo4j, etc.)
 
@@ -176,13 +177,13 @@ export interface VectorBackendConfig {
 }
 
 /**
- * Configuration for S3 backend types.
+ * Configuration for object storage backend types.
  *
  * @category Curation Physical Manifest
  */
-export interface S3BackendConfig {
+export interface ObjectStorageBackendConfig {
   /**
-   * S3 bucket URI.
+   * Object storage bucket URI.
    * @example "s3://acme-finance-datalake/"
    */
   uri: string;
@@ -199,6 +200,29 @@ export interface S3BackendConfig {
 }
 
 /**
+ * Configuration for file system backend types.
+ *
+ * @category Curation Physical Manifest
+ */
+export interface FileSystemBackendConfig {
+  /**
+   * Root directory path the backend is allowed to access.
+   */
+  rootPath: string;
+
+  /**
+   * Whether to allow following symbolic links.
+   * @default false
+   */
+  allowSymlinks?: boolean;
+
+  /**
+   * Glob patterns for paths to ignore (gitignore-style).
+   */
+  ignorePatterns?: string[];
+}
+
+/**
  * Backend-specific configuration.
  * Each backend type has its own configuration structure.
  *
@@ -207,7 +231,8 @@ export interface S3BackendConfig {
 export type BackendConfig =
   | ({ type: "RDBMS" } & RDBMSBackendConfig)
   | ({ type: "VECTOR" } & VectorBackendConfig)
-  | ({ type: "S3" } & S3BackendConfig)
+  | ({ type: "OBJECT_STORAGE" } & ObjectStorageBackendConfig)
+  | ({ type: "FILE_SYSTEM" } & FileSystemBackendConfig)
   | ({ type: "NOSQL" | "GRAPH" } & Record<string, unknown>);
 
 /**

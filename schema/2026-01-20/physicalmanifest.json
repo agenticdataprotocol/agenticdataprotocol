@@ -82,7 +82,7 @@
             {
               "properties": {
                 "type": {
-                  "const": "S3",
+                  "const": "OBJECT_STORAGE",
                   "type": "string"
                 }
               },
@@ -92,7 +92,26 @@
               "type": "object"
             },
             {
-              "$ref": "#/$defs/S3BackendConfig"
+              "$ref": "#/$defs/ObjectStorageBackendConfig"
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "properties": {
+                "type": {
+                  "const": "FILE_SYSTEM",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            {
+              "$ref": "#/$defs/FileSystemBackendConfig"
             }
           ]
         },
@@ -124,10 +143,11 @@
     "BackendType": {
       "description": "Supported backend types for physical data sources.",
       "enum": [
+        "FILE_SYSTEM",
         "GRAPH",
         "NOSQL",
+        "OBJECT_STORAGE",
         "RDBMS",
-        "S3",
         "VECTOR"
       ],
       "type": "string"
@@ -159,6 +179,53 @@
       ],
       "type": "object"
     },
+    "FileSystemBackendConfig": {
+      "description": "Configuration for file system backend types.",
+      "properties": {
+        "allowSymlinks": {
+          "default": false,
+          "description": "Whether to allow following symbolic links.",
+          "type": "boolean"
+        },
+        "ignorePatterns": {
+          "description": "Glob patterns for paths to ignore (gitignore-style).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rootPath": {
+          "description": "Root directory path the backend is allowed to access.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rootPath"
+      ],
+      "type": "object"
+    },
+    "ObjectStorageBackendConfig": {
+      "description": "Configuration for object storage backend types.",
+      "properties": {
+        "endpoint": {
+          "description": "Endpoint URL for S3-compatible services (optional).",
+          "type": "string"
+        },
+        "region": {
+          "description": "AWS region (or equivalent for other S3-compatible services).",
+          "type": "string"
+        },
+        "uri": {
+          "description": "Object storage bucket URI.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "region",
+        "uri"
+      ],
+      "type": "object"
+    },
     "RDBMSBackendConfig": {
       "description": "Configuration for RDBMS backend types.",
       "properties": {
@@ -181,28 +248,6 @@
       "type": "object"
     },
     "Record<string,unknown>": {
-      "type": "object"
-    },
-    "S3BackendConfig": {
-      "description": "Configuration for S3 backend types.",
-      "properties": {
-        "endpoint": {
-          "description": "Endpoint URL for S3-compatible services (optional).",
-          "type": "string"
-        },
-        "region": {
-          "description": "AWS region (or equivalent for other S3-compatible services).",
-          "type": "string"
-        },
-        "uri": {
-          "description": "S3 bucket URI.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "region",
-        "uri"
-      ],
       "type": "object"
     },
     "VectorBackendConfig": {
