@@ -593,7 +593,7 @@ export interface OperationalPolicy {
  * @example
  * { "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }
  * @example
- * { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }
+ * { "role": "user", "allowedIntents": ["LOOKUP", "QUERY", "REVISE"] }
  */
 export interface RoleAccessEntry {
   /**
@@ -669,7 +669,7 @@ export interface RoleAccessEntry {
  *   "resourceSelector": "com.acme.finance:bank_failures",
  *   "roles": [
  *     { "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] },
- *     { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }
+ *     { "role": "user", "allowedIntents": ["LOOKUP", "QUERY", "REVISE"] }
  *   ]
  * }
  */
@@ -753,7 +753,7 @@ export type Policy = MandatoryFilterPolicy | OperationalPolicy | AccessPolicy;
  * {
  *   "version": "1.0.0",
  *   "policies": [
- *     { "type": "ACCESS", "resourceSelector": "com.acme.finance:bank_failures", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY"] }] },
+ *     { "type": "ACCESS", "resourceSelector": "com.acme.finance:bank_failures", "roles": [{ "role": "admin", "allowedIntents": ["LOOKUP", "QUERY", "REVISE", "INGEST"] }, { "role": "user", "allowedIntents": ["LOOKUP", "QUERY", "REVISE"] }] },
  *     { "type": "MANDATORY_FILTER", "resourceId": "com.acme.finance:bank_failures", "fieldId": "closing_date", "op": "GT", "value": "2020-01-01" },
  *     { "type": "OPERATIONAL", "resourceId": "com.acme.finance:bank_failures", "enforceLimit": 100, "defaultOrderBy": { "fieldId": "closing_date", "direction": "DESC" } }
  *   ]
@@ -779,9 +779,10 @@ export interface PolicyManifest {
    *
    * **Bootstrap behavior**: For development and testing, manifests MAY define an
    * explicit "default allow" ACCESS rule (for example, a catch-all selector such as
-   * `"*"` that grants `"*"` intents to a default role) to simulate
-   * open-by-default behavior while still following the closed-by-default ACCESS
-   * semantics. See `examples/policy-bootstrap.yaml` for a reference layout.
+   * `"*"` that grants read-only intents (`["LOOKUP", "QUERY"]`) to a default
+   * role) to simulate open-by-default behavior while still following the
+   * closed-by-default ACCESS semantics. See `examples/policy-bootstrap.yaml`
+   * for a reference layout.
    *
    * For production, define targeted policies to enforce security, data governance,
    * and access controls. Each policy specifies its own scope (resourceId or

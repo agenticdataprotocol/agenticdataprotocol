@@ -25,8 +25,8 @@ policies:
     # Replace "*" with your own resource selector.
     resourceSelector: "*"
     roles:
-      # The default role is used for callers who should have unrestricted
+      # The default role is used for callers who should have read-only
       # access in development / test environments.
       - role: default
-        # "*" means all intent classes are allowed for this role.
-        allowedIntents: ["*"]
+        # Read-only: only LOOKUP and QUERY are allowed for this role.
+        allowedIntents: ["LOOKUP", "QUERY"]
