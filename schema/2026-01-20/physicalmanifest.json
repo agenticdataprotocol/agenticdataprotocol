@@ -82,7 +82,7 @@
             {
               "properties": {
                 "type": {
-                  "const": "OBJECT_STORAGE",
+                  "const": "BLOB_STORAGE",
                   "type": "string"
                 }
               },
@@ -92,26 +92,7 @@
               "type": "object"
             },
             {
-              "$ref": "#/$defs/ObjectStorageBackendConfig"
-            }
-          ]
-        },
-        {
-          "allOf": [
-            {
-              "properties": {
-                "type": {
-                  "const": "FILE_SYSTEM",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "type"
-              ],
-              "type": "object"
-            },
-            {
-              "$ref": "#/$defs/FileSystemBackendConfig"
+              "$ref": "#/$defs/BlobStorageBackendConfig"
             }
           ]
         },
@@ -143,14 +124,46 @@
     "BackendType": {
       "description": "Supported backend types for physical data sources.",
       "enum": [
-        "FILE_SYSTEM",
+        "BLOB_STORAGE",
         "GRAPH",
         "NOSQL",
-        "OBJECT_STORAGE",
         "RDBMS",
         "VECTOR"
       ],
       "type": "string"
+    },
+    "BlobStorageBackendConfig": {
+      "description": "Configuration for blob storage backend types (object storage, file systems, etc.).",
+      "properties": {
+        "allowSymlinks": {
+          "default": false,
+          "description": "Whether to allow following symbolic links (for local file systems).",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "description": "Endpoint URL for S3-compatible services.",
+          "type": "string"
+        },
+        "ignorePatterns": {
+          "description": "Glob patterns for paths to ignore (gitignore-style).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "region": {
+          "description": "Cloud region (for S3-compatible and other cloud storage services).",
+          "type": "string"
+        },
+        "uri": {
+          "description": "URI or path for the storage root.\n- Object storage: bucket URI (e.g., \"s3://acme-finance-datalake/\")\n- File system: root directory path (e.g., \"/data/files\" or \"hdfs://namenode:8020/data\")",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "type": "object"
     },
     "CredentialReference": {
       "description": "Reference to credentials stored externally.",
@@ -176,53 +189,6 @@
       "required": [
         "key",
         "type"
-      ],
-      "type": "object"
-    },
-    "FileSystemBackendConfig": {
-      "description": "Configuration for file system backend types.",
-      "properties": {
-        "allowSymlinks": {
-          "default": false,
-          "description": "Whether to allow following symbolic links.",
-          "type": "boolean"
-        },
-        "ignorePatterns": {
-          "description": "Glob patterns for paths to ignore (gitignore-style).",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "rootPath": {
-          "description": "Root directory path the backend is allowed to access.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "rootPath"
-      ],
-      "type": "object"
-    },
-    "ObjectStorageBackendConfig": {
-      "description": "Configuration for object storage backend types.",
-      "properties": {
-        "endpoint": {
-          "description": "Endpoint URL for S3-compatible services (optional).",
-          "type": "string"
-        },
-        "region": {
-          "description": "AWS region (or equivalent for other S3-compatible services).",
-          "type": "string"
-        },
-        "uri": {
-          "description": "Object storage bucket URI.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "region",
-        "uri"
       ],
       "type": "object"
     },
