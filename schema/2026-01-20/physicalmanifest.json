@@ -82,7 +82,7 @@
             {
               "properties": {
                 "type": {
-                  "const": "S3",
+                  "const": "BLOB_STORAGE",
                   "type": "string"
                 }
               },
@@ -92,7 +92,7 @@
               "type": "object"
             },
             {
-              "$ref": "#/$defs/S3BackendConfig"
+              "$ref": "#/$defs/BlobStorageBackendConfig"
             }
           ]
         },
@@ -124,13 +124,46 @@
     "BackendType": {
       "description": "Supported backend types for physical data sources.",
       "enum": [
+        "BLOB_STORAGE",
         "GRAPH",
         "NOSQL",
         "RDBMS",
-        "S3",
         "VECTOR"
       ],
       "type": "string"
+    },
+    "BlobStorageBackendConfig": {
+      "description": "Configuration for blob storage backend types (object storage, file systems, etc.).",
+      "properties": {
+        "allowSymlinks": {
+          "default": false,
+          "description": "Whether to allow following symbolic links (for local file systems).",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "description": "Endpoint URL for S3-compatible services.",
+          "type": "string"
+        },
+        "ignorePatterns": {
+          "description": "Glob patterns for paths to ignore (gitignore-style).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "region": {
+          "description": "Cloud region (for S3-compatible and other cloud storage services).",
+          "type": "string"
+        },
+        "uri": {
+          "description": "URI or path for the storage root.\n- Object storage: bucket URI (e.g., \"s3://acme-finance-datalake/\")\n- File system: root directory path (e.g., \"/data/files\" or \"hdfs://namenode:8020/data\")",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "type": "object"
     },
     "CredentialReference": {
       "description": "Reference to credentials stored externally.",
@@ -181,28 +214,6 @@
       "type": "object"
     },
     "Record<string,unknown>": {
-      "type": "object"
-    },
-    "S3BackendConfig": {
-      "description": "Configuration for S3 backend types.",
-      "properties": {
-        "endpoint": {
-          "description": "Endpoint URL for S3-compatible services (optional).",
-          "type": "string"
-        },
-        "region": {
-          "description": "AWS region (or equivalent for other S3-compatible services).",
-          "type": "string"
-        },
-        "uri": {
-          "description": "S3 bucket URI.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "region",
-        "uri"
-      ],
       "type": "object"
     },
     "VectorBackendConfig": {

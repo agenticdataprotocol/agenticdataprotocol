@@ -39,18 +39,26 @@ backends:
       manager: "AWS_SECRETS_MANAGER"
       key: "production/pinecone-api-key"
 
-  # S3 Object Storage Backend (provider distinguishes AWS S3 from MinIO, etc.)
+  # Blob Storage Backend - AWS S3 (provider distinguishes S3 from GCS, etc.)
   - id: "raw_storage"
-    type: "S3"
+    type: "BLOB_STORAGE"
     provider: "s3"
     config:
-      type: "S3"
+      type: "BLOB_STORAGE"
       uri: "s3://acme-finance-datalake/"
       region: "us-east-1"
     credentials:
       type: "secret"
       manager: "AWS_SECRETS_MANAGER"
       key: "production/s3-credentials"
+
+  # Blob Storage Backend - local file system
+  - id: "local_files"
+    type: "BLOB_STORAGE"
+    provider: "local"
+    config:
+      type: "BLOB_STORAGE"
+      uri: "/data/warehouse"
 
   # NoSQL Backend - MongoDB (provider distinguishes from DynamoDB, etc.)
   - id: "analytics_nosql"
