@@ -30,8 +30,7 @@ import type {
 export type BackendType =
   | "RDBMS" // Relational databases (PostgreSQL, MySQL, etc.)
   | "VECTOR" // Vector databases (Pinecone, Weaviate, etc.)
-  | "OBJECT_STORAGE" // Object storage (AWS S3, MinIO, etc.)
-  | "FILE_SYSTEM" // File systems (local, NFS, HDFS, etc.)
+  | "BLOB_STORAGE" // Blob/object/file storage (S3, GCS, Azure Blob, HDFS, local FS, etc.)
   | "NOSQL" // NoSQL databases (MongoDB, DynamoDB, etc.)
   | "GRAPH"; // Graph databases (Neo4j, etc.)
 
@@ -43,7 +42,7 @@ export type BackendType =
  * Suggested values by type:
  * - RDBMS: "postgresql", "mysql", "sqlite", "oracle", "mssql", etc.
  * - VECTOR: "pinecone", "weaviate", "qdrant", "milvus", etc.
- * - S3: "s3", "minio", "gcs" (S3-compatible), etc.
+ * - BLOB_STORAGE: "s3", "minio", "gcs", "azureblob", "hdfs", "local", etc.
  * - NOSQL: "mongodb", "dynamodb", "cassandra", etc.
  * - GRAPH: "neo4j", "janusgraph", etc.
  *
@@ -177,41 +176,30 @@ export interface VectorBackendConfig {
 }
 
 /**
- * Configuration for object storage backend types.
+ * Configuration for blob storage backend types (object storage, file systems, etc.).
  *
  * @category Curation Physical Manifest
  */
-export interface ObjectStorageBackendConfig {
+export interface BlobStorageBackendConfig {
   /**
-   * Object storage bucket URI.
-   * @example "s3://acme-finance-datalake/"
+   * URI or path for the storage root.
+   * - Object storage: bucket URI (e.g., "s3://acme-finance-datalake/")
+   * - File system: root directory path (e.g., "/data/files" or "hdfs://namenode:8020/data")
    */
   uri: string;
 
   /**
-   * AWS region (or equivalent for other S3-compatible services).
+   * Cloud region (for S3-compatible and other cloud storage services).
    */
-  region: string;
+  region?: string;
 
   /**
-   * Endpoint URL for S3-compatible services (optional).
+   * Endpoint URL for S3-compatible services.
    */
   endpoint?: string;
-}
-
-/**
- * Configuration for file system backend types.
- *
- * @category Curation Physical Manifest
- */
-export interface FileSystemBackendConfig {
-  /**
-   * Root directory path the backend is allowed to access.
-   */
-  rootPath: string;
 
   /**
-   * Whether to allow following symbolic links.
+   * Whether to allow following symbolic links (for local file systems).
    * @default false
    */
   allowSymlinks?: boolean;
@@ -231,8 +219,7 @@ export interface FileSystemBackendConfig {
 export type BackendConfig =
   | ({ type: "RDBMS" } & RDBMSBackendConfig)
   | ({ type: "VECTOR" } & VectorBackendConfig)
-  | ({ type: "OBJECT_STORAGE" } & ObjectStorageBackendConfig)
-  | ({ type: "FILE_SYSTEM" } & FileSystemBackendConfig)
+  | ({ type: "BLOB_STORAGE" } & BlobStorageBackendConfig)
   | ({ type: "NOSQL" | "GRAPH" } & Record<string, unknown>);
 
 /**
