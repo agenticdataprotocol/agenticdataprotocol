@@ -998,6 +998,17 @@
       ],
       "type": "object"
     },
+    "PredicateExpression": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Predicate"
+        },
+        {
+          "$ref": "#/$defs/PredicateGroup"
+        }
+      ],
+      "description": "A predicate expression that can be either a single predicate or a group of\npredicates combined with a logic operator.\n\nUse a single {@link Predicate} for simple, single-condition filters. Use a\n{@link PredicateGroup} when combining multiple conditions with AND, OR, or NOT."
+    },
     "PredicateGroup": {
       "description": "A group of predicates with a logic operator.",
       "properties": {
@@ -1090,8 +1101,8 @@
           "type": "array"
         },
         "predicates": {
-          "$ref": "#/$defs/PredicateGroup",
-          "description": "Predicates for filtering data."
+          "$ref": "#/$defs/PredicateExpression",
+          "description": "Predicates for filtering data.\n\nA single {@link Predicate} may be used for simple filters; use a\n{@link PredicateGroup} to combine multiple conditions with a logic operator."
         },
         "projections": {
           "description": "Fields to project.",
@@ -1227,8 +1238,8 @@
           "description": "The data payload containing the fields to update."
         },
         "predicates": {
-          "$ref": "#/$defs/PredicateGroup",
-          "description": "Predicates to identify the records to update."
+          "$ref": "#/$defs/PredicateExpression",
+          "description": "Predicates to identify the records to update.\n\nA single {@link Predicate} may be used for simple filters; use a\n{@link PredicateGroup} to combine multiple conditions with a logic operator."
         },
         "resourceId": {
           "description": "The resource to operate on.",

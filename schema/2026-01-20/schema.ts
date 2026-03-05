@@ -388,6 +388,17 @@ export interface PredicateGroup {
   predicates: (Predicate | PredicateGroup)[];
 }
 
+/**
+ * A predicate expression that can be either a single predicate or a group of
+ * predicates combined with a logic operator.
+ *
+ * Use a single {@link Predicate} for simple, single-condition filters. Use a
+ * {@link PredicateGroup} when combining multiple conditions with AND, OR, or NOT.
+ *
+ * @category Common Types
+ */
+export type PredicateExpression = Predicate | PredicateGroup;
+
 /* ============================================================================
  * Initialization
  * ============================================================================ */
@@ -1012,8 +1023,11 @@ export interface QueryIntent {
 
   /**
    * Predicates for filtering data.
+   *
+   * A single {@link Predicate} may be used for simple filters; use a
+   * {@link PredicateGroup} to combine multiple conditions with a logic operator.
    */
-  predicates: PredicateGroup;
+  predicates: PredicateExpression;
 
   /**
    * Fields to project.
@@ -1067,8 +1081,11 @@ export interface ReviseIntent {
 
   /**
    * Predicates to identify the records to update.
+   *
+   * A single {@link Predicate} may be used for simple filters; use a
+   * {@link PredicateGroup} to combine multiple conditions with a logic operator.
    */
-  predicates: PredicateGroup;
+  predicates: PredicateExpression;
 
   /**
    * The data payload containing the fields to update.

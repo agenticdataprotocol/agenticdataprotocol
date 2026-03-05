@@ -520,54 +520,84 @@ This specification is designed for **deterministic code generation**. By providi
       "enum": ["LOOKUP", "QUERY", "PATH", "CORRELATE", "SUMMARIZE", "INGEST", "REVISE", "MERGE", "PRUNE"]
     },
     "predicates": {
-      "type": "object",
-      "description": "Filtering or target criteria as a predicate group with logic operators.",
-      "required": ["op", "predicates"],
-      "properties": {
-        "op": {
-          "type": "string",
-          "enum": ["AND", "OR", "NOT"],
-          "description": "Logic operator to combine predicates."
-        },
-        "predicates": {
-          "type": "array",
-          "description": "Array of predicates or nested predicate groups.",
-          "items": {
-            "oneOf": [
-              {
-                "type": "object",
-                "description": "A single predicate.",
-                "required": ["fieldId", "op", "value"],
-                "properties": {
-                  "fieldId": { "type": "string" },
-                  "op": { "type": "string", "example": "EQ, GT, IN, SIMILAR" },
-                  "value": {
-                    "oneOf": [
-                      { "type": ["string", "number", "boolean", "array"] },
-                      {
-                        "type": "object",
-                        "description": "Structured value for SIMILAR operator.",
-                        "properties": {
-                          "text": { "type": "string" },
-                          "blob": { "type": "string", "description": "Base64 or URI reference." },
-                          "top": { "type": "integer" },
-                          "threshold": { "type": "number" },
-                          "distance_function": { "type": "string" }
-                        }
-                      }
-                    ]
+      "description": "Filtering or target criteria. Can be a single predicate or a predicate group with logic operators.",
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "A single predicate.",
+          "required": ["fieldId", "op", "value"],
+          "properties": {
+            "fieldId": { "type": "string" },
+            "op": { "type": "string", "example": "EQ, GT, IN, SIMILAR" },
+            "value": {
+              "oneOf": [
+                { "type": ["string", "number", "boolean", "array"] },
+                {
+                  "type": "object",
+                  "description": "Structured value for SIMILAR operator.",
+                  "properties": {
+                    "text": { "type": "string" },
+                    "blob": { "type": "string", "description": "Base64 or URI reference." },
+                    "top": { "type": "integer" },
+                    "threshold": { "type": "number" },
+                    "distance_function": { "type": "string" }
                   }
                 }
-              },
-              {
-                "type": "object",
-                "description": "A nested predicate group.",
-                "$ref": "#/properties/predicates"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A predicate group with a logic operator.",
+          "required": ["op", "predicates"],
+          "properties": {
+            "op": {
+              "type": "string",
+              "enum": ["AND", "OR", "NOT"],
+              "description": "Logic operator to combine predicates."
+            },
+            "predicates": {
+              "type": "array",
+              "description": "Array of predicates or nested predicate groups.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "description": "A single predicate.",
+                    "required": ["fieldId", "op", "value"],
+                    "properties": {
+                      "fieldId": { "type": "string" },
+                      "op": { "type": "string", "example": "EQ, GT, IN, SIMILAR" },
+                      "value": {
+                        "oneOf": [
+                          { "type": ["string", "number", "boolean", "array"] },
+                          {
+                            "type": "object",
+                            "description": "Structured value for SIMILAR operator.",
+                            "properties": {
+                              "text": { "type": "string" },
+                              "blob": { "type": "string", "description": "Base64 or URI reference." },
+                              "top": { "type": "integer" },
+                              "threshold": { "type": "number" },
+                              "distance_function": { "type": "string" }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "description": "A nested predicate group.",
+                    "$ref": "#/properties/predicates/oneOf/1"
+                  }
+                ]
               }
-            ]
+            }
           }
         }
-      }
+      ]
     },
     "projections": {
       "type": "array",
@@ -584,16 +614,22 @@ This specification is designed for **deterministic code generation**. By providi
 }
 ```
 
-#### PredicateGroup Structure
+#### PredicateExpression
 
-The `predicates` field uses a **PredicateGroup** structure that allows complex logical combinations of predicates using AND, OR, and NOT operators. This enables nested predicate groups for sophisticated query construction.
+The `predicates` field accepts a **PredicateExpression**, which is either a single **Predicate** or a **PredicateGroup**.
 
-**Structure:**
+- For simple, single-condition filters, use a **Predicate** directly — no wrapping in a group is required.
+- For complex filters combining multiple conditions, use a **PredicateGroup** with a logic operator (`AND`, `OR`, or `NOT`).
 
-- `op`: Logic operator (`AND`, `OR`, or `NOT`)
-- `predicates`: Array of predicates or nested predicate groups
+**Example: Single Predicate (no logic operator needed)**
 
-**Example: Complex Nested Predicates**
+```JSON
+{
+  "predicates": { "fieldId": "state_code", "op": "EQ", "value": "CA" }
+}
+```
+
+**Example: Multiple Predicates (PredicateGroup)**
 
 ```JSON
 {
