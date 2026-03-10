@@ -1,3 +1,7 @@
+# Agentic Data Protocol (ADP) — IR Specification
+
+> **IR** (Intent Representation) is the structured payload format Agents use to express data operations against the Hypervisor. This document is the normative specification for ADP version 2026-01-20.
+
 Version 2026-01-20
 
 This ADP protocol ensures that the Agent and Hypervisor are always in "Contract Alignment." By treating every interaction as a negotiation of constraints, we eliminate the guesswork that leads to broken queries and security rejections.
@@ -52,7 +56,7 @@ Responses follow the standard JSON-RPC result or error format:
 
 - **Interaction:** The Agent requests a list of visible resources.
 - **Hypervisor Action:** Filters the Semantic Manifest based on the Agent's identity and returns only accessible resources.
-- **Output:** A paginated list of `[resourceId, intentClasses, description, tags]`.
+- **Output:** A paginated list of `[resourceId, version, intentClasses, description, semanticDescription, tags]`.
   - _Example:_ `com.acme.finance:bank_failures` | `intentClasses: ["QUERY"]` | `description: Historical records of US bank insolvency.`
 - **Why Domain Tags?** Prefixes (like `com.acme.finance`) act as a namespace, preventing collisions and allowing the Agent to group related entities logically.
 
@@ -76,7 +80,7 @@ Responses follow the standard JSON-RPC result or error format:
 - **Interaction:** Agent issues the finalized `Intent IR`.
 - **Hypervisor Action:** Atomic validation and execution. It compiles the IR into a physical query, executes it against the backend (RDBMS/NoSQL/Vector/GraphDB/etc.), and captures logs.
 - **Output:** A structured result set with optional `executionMetadata` (consistency level, duration, source system).
-- **Statefulness & Feedback:** If validation fails, the Hypervisor returns structured `issues[]` with `correctionHint` fields.
+- **Statefulness & Feedback:** If validation fails at execution time, the Hypervisor returns a JSON-RPC **error response** with `code: VALIDATION_FAILED` (`-32002`). The `error.data` object contains a structured `issues[]` array with `correctionHint` fields for agent self-correction.
 
 ---
 
@@ -102,7 +106,7 @@ sequenceDiagram
     Note over A, H: Phase 1: Semantic Discovery
     A->>+H: adp.discover(filter, cursor)
     Note right of H: Filter by role & resource selector
-    H-->>-A: DiscoverResult([resourceId, intentClasses, description], nextCursor)
+    H-->>-A: DiscoverResult([resourceId, version, intentClasses, description, semanticDescription, tags], nextCursor)
 
     Note over A, H: Phase 2: Contract Negotiation
     A->>+H: adp.describe(resourceId, intentClass)
@@ -123,7 +127,7 @@ sequenceDiagram
         H->>H: Apply Operational Limits
         H-->>A: ExecuteResult(results[], executionMetadata, nextCursor)
     else is Contract Violation
-        H-->>-A: ValidateResult(valid: false, issues[BLOCKING])
+        H-->>-A: ErrorResponse(code: VALIDATION_FAILED=-32002, data: {issues[BLOCKING]})
         Note over A: Agent self-corrects based on correctionHint
     end
 ```
@@ -148,7 +152,7 @@ This table serves as the normative definition for all Agent interactions. Note t
 
 | **Category** | **Intent Class** | **Purpose**                                  | **Logic Mechanism**    | **Expected Output**  |
 | ------------ | ---------------- | -------------------------------------------- | ---------------------- | -------------------- |
-| **READ**     | **LOOKUP**       | Retrieve 1 entity by unique key.             | Identity Predicate     | Single Object        |
+| **READ**     | **LOOKUP**       | Retrieve 1 entity by unique key.             | Identity Predicate     | `results[]` (≤ 1 row) |
 | **READ**     | **QUERY**        | Retrieve a set of entities.                  | PredicateExpression    | List of Objects      |
 | **WRITE**    | **INGEST**       | Create or append new data entries.           | Value Payload (array)  | Operation Results    |
 | **WRITE**    | **REVISE**       | Update existing entries (full or partial).   | Predicates + Payload   | Operation Results    |
@@ -244,6 +248,9 @@ Key resource properties:
 - `resourceId`: Domain-qualified identifier (e.g., `com.acme.finance:bank_failures`).
 - `version`: Integer resource version, starting from 1.
 - `intentClasses`: Intent classes this resource supports. Use `["*"]` for all.
+- `description`: Short human-readable label (shown in `adp.discover` results).
+- `semanticDescription`: Longer natural-language description to help agents select the right resource.
+- `tags`: Array of categorisation labels (e.g., `["FINANCE", "REGULATORY"]`).
 - `backendId`: Reference to a backend defined in `physical.yaml`.
 - `sourceDefinition`: The single data source within the backend (table, collection, prefix, etc.) with field definitions.
 
@@ -392,6 +399,35 @@ policies:
 }
 ```
 
+### D3. adp.ping Interface Specification
+
+#### D3.1 Normative Description
+
+- **Purpose**: Lightweight health check and connection keepalive. Verify the Hypervisor is reachable before issuing heavier calls.
+- **Logic**: `params` is optional and may be omitted entirely. The Hypervisor responds immediately with an empty result object.
+
+#### D3.2. adp.ping IR Specification
+
+##### Input: PingRequest
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "adp.ping"
+}
+```
+
+##### Output: EmptyResult
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
+
 ---
 
 ## E. adp.discover Interface Specification
@@ -416,8 +452,7 @@ policies:
       "domainPrefix": "com.acme",
       "intentClass": "QUERY",
       "keyword": "liquidity"
-    },
-    "cursor": null
+    }
   }
 }
 ```
@@ -474,8 +509,7 @@ policies:
   "method": "adp.describe",
   "params": {
     "resourceId": "com.acme.finance:bank_failures",
-    "intentClass": "QUERY",
-    "cursor": null
+    "intentClass": "QUERY"
   }
 }
 ```
@@ -561,6 +595,9 @@ policies:
 | **`cardinality`**        | A hint about the number of unique values in the field.               | "If low (e.g., < 20), use a categorical picker. If high, use a text search."      |
 | **`whitelistOnly`**      | If `true`, only values from `samples` are valid.                     | "Validate the user input against `samples` before calling `adp.execute`."         |
 | **`isSearchable: true`** | Field supports the `SIMILAR` operator for semantic/vector search.    | "Use `SIMILAR` operator with a `SimilarValue` for semantic queries."              |
+| **`metadata.vector`**    | Present on VECTOR fields. Contains `dimensions: number` and optional `distanceFunction: string`. | "Validate pre-computed vector arrays are the correct length; use `distanceFunction` as the default in `SimilarValue` payloads (see G2)." |
+
+> **Note on `isMasked`**: The ADP schema defines an `isMasked?: boolean` flag on `Field` objects. Data masking is **not supported in this protocol version** — Hypervisors must not set this flag, and clients should ignore it if encountered.
 
 ---
 
@@ -573,6 +610,8 @@ This specification is designed for **deterministic code generation**. By providi
 The `intent` field in `adp.execute` (and `adp.validate`) is a discriminated union based on `intentClass`.
 
 #### LookupIntent — Single Entity by Unique Key
+
+> **Note**: The `key` field is typed as `IdentityPredicate` in the schema, which **only permits `op: "EQ"` with a single scalar value**. The general predicate operators listed in Section G2 (`IN`, `GT`, `LIKE`, etc.) do not apply to LOOKUP keys. The response is always `results[]` with at most one element.
 
 ```json
 {
@@ -652,6 +691,8 @@ The `predicates` field in `QueryIntent` and `ReviseIntent` accepts a **Predicate
 - `op`: Logic operator — `"AND"`, `"OR"`, or `"NOT"`
 - `predicates`: Array of `Predicate` or nested `PredicateGroup` objects
 
+> **Note on `NOT`**: `NOT` is a **unary** operator. Its `predicates` array must contain exactly one element (a single `Predicate` or `PredicateGroup`). Multi-child `NOT` groups are not defined and may be rejected or interpreted inconsistently by backends.
+
 **Example: Single Predicate (no logic operator wrapper needed)**
 
 ```json
@@ -668,13 +709,23 @@ The `predicates` field in `QueryIntent` and `ReviseIntent` accepts a **Predicate
 {
   "text": "liquidity risk crisis",
   "vector": [0.12, -0.34, 0.56],
+  "blob": "data:image/png;base64,iVBORw0KGgo=",
   "distanceFunction": "COSINE",
   "top": 5,
   "threshold": 0.75
 }
 ```
 
-The optional `vector` field allows passing a **pre-computed embedding** directly, avoiding redundant server-side embedding computation. `threshold` is a float (`0.0`–`1.0`).
+| Field              | Type       | Required | Description |
+| ------------------ | ---------- | -------- | ----------- |
+| `text`             | string     | optional | Natural-language query; the Hypervisor generates the embedding server-side. |
+| `vector`           | number[]   | optional | Pre-computed embedding array, bypassing server-side embedding. Use `metadata.vector.dimensions` to validate length. |
+| `blob`             | string     | optional | Base64 data URI or URL reference (e.g., image) for multimodal similarity search. |
+| `distanceFunction` | string     | optional | Distance metric (`"COSINE"`, `"EUCLIDEAN"`, etc.). Defaults to the field's `metadata.vector.distanceFunction`. |
+| `top`              | integer    | optional | Maximum number of nearest-neighbour results to return. |
+| `threshold`        | float      | optional | Minimum similarity score (`0.0`–`1.0`) to include a result. |
+
+At least one of `text`, `vector`, or `blob` must be provided.
 
 **Predicate Operators:**
 
@@ -688,7 +739,7 @@ The optional `vector` field allows passing a **pre-computed embedding** directly
 | `LTE`       | Less than or equal                |
 | `IN`        | Value in array                    |
 | `LIKE`      | Pattern matching (case-sensitive) |
-| `ILIKE`     | Pattern matching (case-insensitive)|
+| `ILIKE`     | Pattern matching (case-insensitive) |
 | `CONTAINS`  | Substring / containment           |
 | `SIMILAR`   | Vector / semantic similarity      |
 
@@ -761,8 +812,7 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
       "projections": ["bank_name", "closing_date", "failure_summary"],
       "orderBy": [{ "fieldId": "closing_date", "direction": "DESC" }],
       "limit": 5
-    },
-    "cursor": null
+    }
   }
 }
 ```
@@ -917,7 +967,7 @@ We put the enforcement logic into the **Usage Contract** returned by `adp.descri
 1. **Contract Inspection**: Agent calls `adp.describe(resourceId, intentClass)`.
 2. **Logic Mapping**: Hypervisor returns `capabilities.predicates` with `usage: "REQUIRED"` or `"OPTIONAL"`.
 3. **Constraint Injection**: The Agent **must** include a `Predicate` for every `REQUIRED` field in its `adp.execute` call.
-4. **Enforcement**: If a `REQUIRED` predicate is missing, the Hypervisor returns a validation issue with `code: "MISSING_REQUIRED_PREDICATE"` and `severity: "BLOCKING"`.
+4. **Enforcement**: If a `REQUIRED` predicate is missing, `adp.execute` returns a JSON-RPC error response with `code: VALIDATION_FAILED` (`-32002`). The `error.data.issues[]` array contains the blocking issue with `code: "MISSING_REQUIRED_PREDICATE"` and a `correctionHint`.
 
 ### I2. Why `adp.validate()` is separate from `adp.execute()`
 
