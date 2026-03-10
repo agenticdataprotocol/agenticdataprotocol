@@ -11,7 +11,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "npm run check:schema",
+    "check": "npm run check:license && npm run check:schema",
+    "check:license": "tsx scripts/check-license.ts",
     "check:schema": "npm run check:schema:ts && npm run check:schema:json",
     "check:schema:ts": "tsc --noEmit && eslint schema/ && prettier --check \"schema/**/*.ts\"",
     "check:schema:json": "tsx scripts/generate-schemas.ts --check",
