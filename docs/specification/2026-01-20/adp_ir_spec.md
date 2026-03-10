@@ -144,7 +144,7 @@ All resources within the ADP ecosystem are addressed using a unique, structured 
 
 ### B2. Supported Intent Classes
 
-This table serves as the normative definition for all Agent interactions. Note that the intent class set has been rationalized from the draft spec — advanced read patterns (PATH, CORRELATE, SUMMARIZE) and advanced write patterns (MERGE, PRUNE) are not supported.
+This table serves as the normative definition for all Agent interactions. Note that the intent class set has been rationalized from the draft spec — advanced read patterns (PATH, CORRELATE, SUMMARIZE) and advanced write patterns (MERGE, PRUNE) are not supported in this version and are planned for a future release.
 
 | **Category** | **Intent Class** | **Purpose**                                  | **Logic Mechanism**    | **Expected Output**  |
 | ------------ | ---------------- | -------------------------------------------- | ---------------------- | -------------------- |
