@@ -149,7 +149,7 @@ This table serves as the normative definition for all Agent interactions. Note t
 | **Category** | **Intent Class** | **Purpose**                                  | **Logic Mechanism**    | **Expected Output**  |
 | ------------ | ---------------- | -------------------------------------------- | ---------------------- | -------------------- |
 | **READ**     | **LOOKUP**       | Retrieve 1 entity by unique key.             | Identity Predicate     | Single Object        |
-| **READ**     | **QUERY**        | Retrieve a set of entities.                  | Boolean PredicateGroup | List of Objects      |
+| **READ**     | **QUERY**        | Retrieve a set of entities.                  | PredicateExpression    | List of Objects      |
 | **WRITE**    | **INGEST**       | Create or append new data entries.           | Value Payload (array)  | Operation Results    |
 | **WRITE**    | **REVISE**       | Update existing entries (full or partial).   | Predicates + Payload   | Operation Results    |
 
@@ -157,13 +157,13 @@ Wildcard `"*"` can be used in resource definitions to accept any intent class.
 
 ### B3. Backend Mapping to ADP Intent Classes
 
-| **Backend Type** | **LOOKUP (Point)** | **QUERY (Set)**    | **INGEST (Create)** | **REVISE (Update)**  |
-| ---------------- | ------------------ | ------------------ | ------------------- | -------------------- |
-| **RDBMS**        | `PK` Lookup        | `SELECT ... WHERE` | `INSERT`            | `UPDATE ... WHERE`   |
-| **Vector DB**    | `fetch(id)`        | Metadata Filter+NN | `upsert(vector)`    | `upsert(id, vector)` |
-| **Graph DB**     | `MATCH (n) ID(n)`  | Property Filters   | `CREATE (n:Label)`  | `SET n.prop = x`     |
-| **NoSQL**        | `GetItem`          | `Query` / `Scan`   | `PutItem`           | `UpdateItem`         |
-| **S3**           | `GetObject`        | `ListObjects`      | `PutObject`         | `PutObject`          |
+| **Backend Type**    | **LOOKUP (Point)** | **QUERY (Set)**    | **INGEST (Create)** | **REVISE (Update)**  |
+| ------------------- | ------------------ | ------------------ | ------------------- | -------------------- |
+| **RDBMS**           | `PK` Lookup        | `SELECT ... WHERE` | `INSERT`            | `UPDATE ... WHERE`   |
+| **Vector DB**       | `fetch(id)`        | Metadata Filter+NN | `upsert(vector)`    | `upsert(id, vector)` |
+| **Graph DB**        | `MATCH (n) ID(n)`  | Property Filters   | `CREATE (n:Label)`  | `SET n.prop = x`     |
+| **NoSQL**           | `GetItem`          | `Query` / `Scan`   | `PutItem`           | `UpdateItem`         |
+| **BLOB_STORAGE**    | `GetObject`        | `ListObjects`      | `PutObject`         | `PutObject`          |
 
 ---
 
@@ -175,7 +175,7 @@ ADP uses a three-manifest architecture to separate physical, semantic, and polic
 
 Defines the physical backend data sources. Each backend entry has:
 - `id`: Unique identifier referenced by the Semantic Manifest.
-- `type`: Backend category — `RDBMS`, `VECTOR`, `S3`, `NOSQL`, `GRAPH`.
+- `type`: Backend category — `RDBMS`, `VECTOR`, `BLOB_STORAGE`, `NOSQL`, `GRAPH`.
 - `provider`: Implementation variant (e.g., `postgresql`, `mysql`, `pinecone`, `mongodb`, `neo4j`). **Required** to distinguish backends with the same type.
 - `config`: Backend-specific connection configuration.
 - `credentials`: External credential reference (env variable, secret manager, or file).
@@ -200,13 +200,33 @@ backends:
     provider: "pinecone"
     config:
       type: "VECTOR"
-      provider: "PINECONE"
       indexName: "bank-summaries"
       endpoint: "https://api.pinecone.io"
     credentials:
       type: "secret"
       manager: "AWS_SECRETS_MANAGER"
       key: "production/pinecone-api-key"
+
+  # Blob Storage Backend - covers S3, GCS, local FS, HDFS, etc.
+  - id: "raw_storage"
+    type: "BLOB_STORAGE"
+    provider: "s3"
+    config:
+      type: "BLOB_STORAGE"
+      uri: "s3://acme-finance-datalake/"
+      region: "us-east-1"
+    credentials:
+      type: "secret"
+      manager: "AWS_SECRETS_MANAGER"
+      key: "production/s3-credentials"
+
+  # Blob Storage Backend - local file system
+  - id: "local_files"
+    type: "BLOB_STORAGE"
+    provider: "local"
+    config:
+      type: "BLOB_STORAGE"
+      uri: "/data/warehouse"
 ```
 
 **Credential reference types:**
@@ -323,7 +343,7 @@ policies:
       direction: "DESC"
 ```
 
-**Bootstrap policy** (development/testing): Define a catch-all ACCESS rule granting `"*"` intents to a `default` role.
+**Bootstrap policy** (development/testing): Define a catch-all ACCESS rule granting read-only intents (`["LOOKUP", "QUERY"]`) to a `default` role.
 
 ---
 
@@ -621,40 +641,52 @@ The `intent` field in `adp.execute` (and `adp.validate`) is a discriminated unio
 {
   "intentClass": "REVISE",
   "resourceId": "com.acme.finance:bank_failures",
-  "predicates": {
-    "op": "AND",
-    "predicates": [
-      { "fieldId": "bank_id", "op": "EQ", "value": "FDIC-10538" }
-    ]
-  },
+  "predicates": { "fieldId": "bank_id", "op": "EQ", "value": "FDIC-10538" },
   "payload": {
     "failure_summary": "Updated summary reflecting new FDIC findings."
   }
 }
 ```
 
-### G2. PredicateGroup Structure
+### G2. PredicateExpression Structure
 
-The `predicates` field in `QueryIntent` and `ReviseIntent` uses a **PredicateGroup** structure that supports complex logical combinations using `AND`, `OR`, and `NOT` operators. Groups can be nested.
+The `predicates` field in `QueryIntent` and `ReviseIntent` accepts a **PredicateExpression**, which is either a single **Predicate** or a **PredicateGroup**:
 
-**Structure:**
-- `op`: Logic operator — `"AND"`, `"OR"`, or `"NOT"`
-- `predicates`: Array of `Predicate` or nested `PredicateGroup` objects
+- **Single Predicate**: Use directly for simple, single-condition filters — no wrapping in a group required.
+- **PredicateGroup**: Use for multiple conditions combined with `AND`, `OR`, or `NOT`. Groups can be nested.
 
-**Predicate fields:**
+**Single Predicate fields:**
 - `fieldId`: Field to filter on
 - `op`: Comparison operator (see operator table below)
 - `value`: Scalar, array, or `SimilarValue` object (for `SIMILAR`)
+
+**PredicateGroup fields:**
+- `op`: Logic operator — `"AND"`, `"OR"`, or `"NOT"`
+- `predicates`: Array of `Predicate` or nested `PredicateGroup` objects
+
+**Example: Single Predicate (no logic operator wrapper needed)**
+
+```json
+{
+  "intentClass": "QUERY",
+  "resourceId": "com.acme.finance:bank_failures",
+  "predicates": { "fieldId": "state_code", "op": "EQ", "value": "CA" },
+  "projections": ["bank_name", "closing_date"]
+}
+```
 
 **SimilarValue** (for vector/semantic search using the `SIMILAR` operator):
 ```json
 {
   "text": "liquidity risk crisis",
+  "vector": [0.12, -0.34, 0.56],
   "distanceFunction": "COSINE",
   "top": 5,
   "threshold": 0.75
 }
 ```
+
+The optional `vector` field allows passing a **pre-computed embedding** directly, avoiding redundant server-side embedding computation. `threshold` is a float (`0.0`–`1.0`).
 
 **Predicate Operators:**
 
