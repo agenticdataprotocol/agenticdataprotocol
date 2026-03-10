@@ -56,7 +56,7 @@ Responses follow the standard JSON-RPC result or error format:
 
 - **Interaction:** The Agent requests a list of visible resources.
 - **Hypervisor Action:** Filters the Semantic Manifest based on the Agent's identity and returns only accessible resources.
-- **Output:** A paginated list of `[resourceId, version, intentClasses, description, semanticDescription, tags]`.
+- **Output:** A paginated list of resources, each containing: `resourceId`, `version`, `intentClasses`, and optionally `description?`, `semanticDescription?`, and `tags?`.
   - _Example:_ `com.acme.finance:bank_failures` | `intentClasses: ["QUERY"]` | `description: Historical records of US bank insolvency.`
 - **Why Domain Tags?** Prefixes (like `com.acme.finance`) act as a namespace, preventing collisions and allowing the Agent to group related entities logically.
 
@@ -73,7 +73,7 @@ Responses follow the standard JSON-RPC result or error format:
 
 - **Interaction:** Agent submits a draft `Intent IR` for a "sanity check."
 - **Hypervisor Action:** Performs full syntax validation, policy compliance check, and semantic mapping without touching the database.
-- **Output:** A **Validation Result** with `valid` boolean and structured `issues[]` (each with severity `BLOCKING` or `WARNING`).
+- **Output:** A **Validation Result** with `valid` boolean and an optional `issues[]` array (each issue has severity `BLOCKING` or `WARNING`). The `issues` field may be absent when `valid: true` and no warnings were generated.
 
 #### 5. EXECUTE (The Commitment)
 
@@ -104,19 +104,19 @@ sequenceDiagram
     H-->>-A: InitializeResult(serverInfo, protocolVersion, capabilities)
 
     Note over A, H: Phase 1: Semantic Discovery
-    A->>+H: adp.discover(filter, cursor)
+    A->>+H: adp.discover(filter?, cursor?)
     Note right of H: Filter by role & resource selector
-    H-->>-A: DiscoverResult([resourceId, version, intentClasses, description, semanticDescription, tags], nextCursor)
+    H-->>-A: DiscoverResult([resourceId, version, intentClasses, description?, semanticDescription?, tags?], nextCursor?)
 
     Note over A, H: Phase 2: Contract Negotiation
-    A->>+H: adp.describe(resourceId, intentClass)
+    A->>+H: adp.describe(resourceId, intentClass, version?, cursor?)
     Note right of H: Merge Semantic Manifest + Policies
-    H-->>-A: DescribeResult(usageContract: {fields, capabilities})
+    H-->>-A: DescribeResult(resourceId, intentClass, version, usageContract: {fields, capabilities})
 
     Note over A, H: Phase 3: Optional Validation (Dry-Run)
     A->>+H: adp.validate(intent)
     Note right of H: Check Syntax & Policy Compliance
-    H-->>-A: ValidateResult(valid, issues[])
+    H-->>-A: ValidateResult(valid, issues[]?)
 
     Note over A, H: Phase 4: Execution
     A->>+H: adp.execute(intent, cursor)
@@ -181,8 +181,9 @@ Defines the physical backend data sources. Each backend entry has:
 - `id`: Unique identifier referenced by the Semantic Manifest.
 - `type`: Backend category — `RDBMS`, `VECTOR`, `BLOB_STORAGE`, `NOSQL`, `GRAPH`.
 - `provider`: Implementation variant (e.g., `postgresql`, `mysql`, `pinecone`, `mongodb`, `neo4j`). **Required** to distinguish backends with the same type.
-- `config`: Backend-specific connection configuration.
-- `credentials`: External credential reference (env variable, secret manager, or file).
+- `config`: Backend-specific connection configuration. **Must include a `type` discriminant** matching the backend's `type` field (e.g., `type: "RDBMS"`) to identify the config schema variant (`RDBMSBackendConfig`, `VectorBackendConfig`, `BlobStorageBackendConfig`, etc.). For VECTOR backends, the config optionally accepts a `dimensions` field specifying the vector size (if not defined in the semantic layer).
+- `credentials` _(optional)_: External credential reference (env variable, secret manager, or file). May be omitted when the backend uses ambient authentication (e.g., IAM roles, service accounts).
+- `metadata` _(optional)_: Arbitrary key-value metadata about the backend (e.g., tags, owner info). Not used by the protocol runtime.
 
 ```yaml
 version: "1.0.0"
@@ -248,11 +249,11 @@ Key resource properties:
 - `resourceId`: Domain-qualified identifier (e.g., `com.acme.finance:bank_failures`).
 - `version`: Integer resource version, starting from 1.
 - `intentClasses`: Intent classes this resource supports. Use `["*"]` for all.
-- `description`: Short human-readable label (shown in `adp.discover` results).
-- `semanticDescription`: Longer natural-language description to help agents select the right resource.
-- `tags`: Array of categorisation labels (e.g., `["FINANCE", "REGULATORY"]`).
+- `description` _(optional)_: Short human-readable label (shown in `adp.discover` results).
+- `semanticDescription` _(optional)_: Longer natural-language description to help agents select the right resource.
+- `tags` _(optional)_: Array of categorisation labels (e.g., `["FINANCE", "REGULATORY"]`).
 - `backendId`: Reference to a backend defined in `physical.yaml`.
-- `sourceDefinition`: The single data source within the backend (table, collection, prefix, etc.) with field definitions.
+- `sourceDefinition`: The single data source within the backend (table, collection, prefix, etc.). The `sourceDefinition.fields` property is **optional** — opaque backends (blob stores, arbitrary key-value stores) may omit it; the resource will then expose an implementation-defined payload with no field-level schema.
 
 ```yaml
 version: "1.0.0"
@@ -303,8 +304,8 @@ Defines governance policies. Each policy specifies its own scope. Three policy t
 | Type               | Scope             | Description                                         |
 | ------------------ | ----------------- | --------------------------------------------------- |
 | `ACCESS`           | `resourceSelector` (wildcard) | RBAC: which roles can use which intent classes |
-| `MANDATORY_FILTER` | `resourceId` (exact)          | Predicates the Agent _must_ include in every request |
-| `OPERATIONAL`      | `resourceId` (exact)          | Enforces result limits and default sort order        |
+| `MANDATORY_FILTER` | `resourceId` (exact)          | Predicates the Agent _must_ include in every request. Supports optional `condition` expression (e.g., `"agent_tier == 'PRODUCTION'"`) to activate conditionally. |
+| `OPERATIONAL`      | `resourceId` (exact)          | Enforces result limits (`enforceLimit`) and/or default sort order (`defaultOrderBy: SortOrder`). Note: `defaultOrderBy` is a **single** `SortOrder` object, not an array. Supports optional `condition` expression to activate conditionally. |
 
 **ACCESS policy — closed-by-default:** If no ACCESS policy matches a resource, no role/intent is permitted. Resources must be explicitly opted in.
 
@@ -337,16 +338,17 @@ policies:
     value: "2020-01-01"
     condition: "agent_tier == 'PRODUCTION'"
 
-  # Operational: cap results and set default sort
+  # Operational: cap results, set default sort, apply condition
   - type: "OPERATIONAL"
     resourceId: "com.acme.finance:bank_failures"
     enforceLimit: 100
     defaultOrderBy:
       fieldId: "closing_date"
       direction: "DESC"
+    condition: "agent_tier == 'PRODUCTION'"
 ```
 
-**Bootstrap policy** (development/testing): Define a catch-all ACCESS rule granting read-only intents (`["LOOKUP", "QUERY"]`) to a `default` role.
+**Bootstrap policy** (development/testing): Define a catch-all ACCESS rule using `resourceSelector: "*"` to allow access to all resources for a named role. For example, grant all intents to a `public` role (`{ "role": "public", "allowedIntents": ["*"] }`). Adjust the role name and intent set to match the target environment.
 
 ---
 
@@ -379,6 +381,8 @@ policies:
 }
 ```
 
+> **Note on `ClientCapabilities.experimental`**: The `experimental` field accepts a map of `string → object` (not a plain empty object). Use it to advertise non-standard capabilities: `{ "experimental": { "myFeature": { "enabled": true } } }`. An empty object `{}` is also valid.
+
 #### Output: InitializeResult
 
 ```json
@@ -398,6 +402,8 @@ policies:
   }
 }
 ```
+
+> **Note on `ServerCapabilities.supportedIntentClasses`**: This field is **optional**. If omitted by the server, the client should treat all intent classes as potentially supported and rely on `adp.describe` for resource-level capability details.
 
 ### D3. adp.ping Interface Specification
 
@@ -575,8 +581,7 @@ policies:
         ],
         "mutables": []
       }
-    },
-    "nextCursor": null
+    }
   }
 }
 ```
@@ -595,7 +600,8 @@ policies:
 | **`cardinality`**        | A hint about the number of unique values in the field.               | "If low (e.g., < 20), use a categorical picker. If high, use a text search."      |
 | **`whitelistOnly`**      | If `true`, only values from `samples` are valid.                     | "Validate the user input against `samples` before calling `adp.execute`."         |
 | **`isSearchable: true`** | Field supports the `SIMILAR` operator for semantic/vector search.    | "Use `SIMILAR` operator with a `SimilarValue` for semantic queries."              |
-| **`metadata.vector`**    | Present on VECTOR fields. Contains `dimensions: number` and optional `distanceFunction: string`. | "Validate pre-computed vector arrays are the correct length; use `distanceFunction` as the default in `SimilarValue` payloads (see G2)." |
+| **`metadata.vector`**    | Present on VECTOR fields. Contains `dimensions: number` and optional `distanceFunction: string` (e.g., `"COSINE"`, `"L2"`, `"INNER_PRODUCT"`). | "Validate pre-computed vector arrays are the correct length; use `distanceFunction` as the default in `SimilarValue` payloads (see G2)." |
+| **`Field.samples`**      | Optional top-level `samples?: unknown[]` on the `Field` object. Provides sample values as a convenience shorthand alongside `metadata.samples`. | "Use as a quick enumeration of valid values when `whitelistOnly` is also true." |
 
 > **Note on `isMasked`**: The ADP schema defines an `isMasked?: boolean` flag on `Field` objects. Data masking is **not supported in this protocol version** — Hypervisors must not set this flag, and clients should ignore it if encountered.
 
@@ -627,6 +633,8 @@ The `intent` field in `adp.execute` (and `adp.validate`) is a discriminated unio
 ```
 
 #### QueryIntent — Filtered Set of Entities
+
+> **Note**: The `predicates` field is **required** in `QueryIntent` and `ReviseIntent` — it has no `?` and cannot be omitted. All other fields (`projections`, `orderBy`, `limit`) are optional.
 
 ```json
 {
@@ -691,7 +699,7 @@ The `predicates` field in `QueryIntent` and `ReviseIntent` accepts a **Predicate
 - `op`: Logic operator — `"AND"`, `"OR"`, or `"NOT"`
 - `predicates`: Array of `Predicate` or nested `PredicateGroup` objects
 
-> **Note on `NOT`**: `NOT` is a **unary** operator. Its `predicates` array must contain exactly one element (a single `Predicate` or `PredicateGroup`). Multi-child `NOT` groups are not defined and may be rejected or interpreted inconsistently by backends.
+> **Note on `NOT`**: `NOT` is a **unary** operator by convention. Its `predicates` array **SHOULD** contain exactly one element (a single `Predicate` or `PredicateGroup`). Note: this constraint is not enforced by the type system — multiple predicates are technically accepted at the wire level — but backends may reject or interpret multi-child `NOT` groups inconsistently.
 
 **Example: Single Predicate (no logic operator wrapper needed)**
 
@@ -721,7 +729,7 @@ The `predicates` field in `QueryIntent` and `ReviseIntent` accepts a **Predicate
 | `text`             | string     | optional | Natural-language query; the Hypervisor generates the embedding server-side. |
 | `vector`           | number[]   | optional | Pre-computed embedding array, bypassing server-side embedding. Use `metadata.vector.dimensions` to validate length. |
 | `blob`             | string     | optional | Base64 data URI or URL reference (e.g., image) for multimodal similarity search. |
-| `distanceFunction` | string     | optional | Distance metric (`"COSINE"`, `"EUCLIDEAN"`, etc.). Defaults to the field's `metadata.vector.distanceFunction`. |
+| `distanceFunction` | string     | optional | Distance metric (e.g., `"COSINE"`, `"L2"`, `"INNER_PRODUCT"`). Defaults to the field's `metadata.vector.distanceFunction`. |
 | `top`              | integer    | optional | Maximum number of nearest-neighbour results to return. |
 | `threshold`        | float      | optional | Minimum similarity score (`0.0`–`1.0`) to include a result. |
 
@@ -784,12 +792,15 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
 
 #### Input: ExecuteRequest
 
+The `params` object accepts `intent` plus an optional `cursor` field for paginated continuation. Pass the `nextCursor` value from a previous `ExecuteResult` to retrieve the next page:
+
 ```json
 {
   "jsonrpc": "2.0",
   "id": 4,
   "method": "adp.execute",
   "params": {
+    "cursor": "cmVjX2lkOjEy",
     "intent": {
       "intentClass": "QUERY",
       "resourceId": "com.acme.finance:bank_failures",
@@ -841,6 +852,8 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
 }
 ```
 
+> **Note on WRITE operation results**: For `INGEST` and `REVISE` intents, `ExecuteResult.results[]` contains operation result records. Each record is a `Record<string, unknown>` map whose exact shape is backend-dependent (e.g., affected record IDs, row counts, or operation status). Agents should not assume a fixed schema for write results; inspect the actual response for confirmation details.
+
 ### G5. Normative Enforcement Table
 
 | **Rule**        | **Enforcement**                               | **Hypervisor Response if Violated**             |
@@ -860,7 +873,7 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
 
 - **Purpose**: Dry-run validation of an `Intent IR` against the Resource Contract and active Policies.
 - **Scope**: Checks for mandatory predicates, data type/format alignment, projection permissions, and operator validity.
-- **Outcome**: Returns a boolean `valid` status. If `false`, provides a structured `issues` array for Agent self-correction.
+- **Outcome**: Returns a boolean `valid` status. When issues exist, an optional `issues` array is provided for Agent self-correction. The `issues` field **may be absent** when `valid: true` and no warnings were generated.
 - **Idempotency**: `adp.validate` MUST NOT change the state of the data backend.
 
 ### H2. adp.validate IR Specification
@@ -949,14 +962,14 @@ The input wraps the same `Intent IR` used in `adp.execute`.
 
 ## I. Unified View: The ADP Interface Flow
 
-| **Call**             | **Core Input**                  | **Core Output**                   |
-| -------------------- | ------------------------------- | --------------------------------- |
-| **adp.initialize()** | `protocolVersion`, `clientInfo` | `serverInfo`, `capabilities`      |
-| **adp.ping()**       | _(empty)_                       | _(empty)_                         |
-| **adp.discover()**   | `filter`, `cursor`              | `resources[]`, `nextCursor`       |
-| **adp.describe()**   | `resourceId`, `intentClass`     | `usageContract`, `nextCursor`     |
-| **adp.validate()**   | `intent`                        | `valid` (bool), `issues[]`        |
-| **adp.execute()**    | `intent`, `cursor`              | `results[]`, `executionMetadata`, `nextCursor` |
+| **Call**             | **Core Input**                          | **Core Output**                                        |
+| -------------------- | --------------------------------------- | ------------------------------------------------------ |
+| **adp.initialize()** | `protocolVersion`, `clientInfo`         | `serverInfo`, `protocolVersion`, `capabilities?`       |
+| **adp.ping()**       | _(empty)_                               | _(empty)_                                              |
+| **adp.discover()**   | `filter?`, `cursor?`                    | `resources[]`, `nextCursor?`                           |
+| **adp.describe()**   | `resourceId`, `intentClass`, `version?` | `resourceId`, `intentClass`, `version`, `usageContract` |
+| **adp.validate()**   | `intent`                                | `valid` (bool), `issues[]?`                            |
+| **adp.execute()**    | `intent`, `cursor?`                     | `results[]`, `executionMetadata?`, `nextCursor?`       |
 
 ### I1. The Required Predicate Mechanism
 
@@ -979,8 +992,10 @@ We put the enforcement logic into the **Usage Contract** returned by `adp.descri
 
 The `executionMetadata` field in `adp.execute` results provides observability:
 
-| **Field**       | **Type**   | **Description**                                        |
-| --------------- | ---------- | ------------------------------------------------------ |
-| `consistency`   | enum       | `"STRONG"` or `"EVENTUAL"` — data freshness guarantee |
-| `sourceSystem`  | string     | Backend ID that served the request                     |
-| `durationMs`    | integer    | Total execution time in milliseconds                   |
+All `executionMetadata` fields are **optional** — the object itself and each of its fields may be absent.
+
+| **Field**       | **Type**   | **Required** | **Description**                                        |
+| --------------- | ---------- | ------------ | ------------------------------------------------------ |
+| `consistency`   | enum       | optional     | `"STRONG"` or `"EVENTUAL"` — data freshness guarantee |
+| `sourceSystem`  | string     | optional     | Backend ID that served the request                     |
+| `durationMs`    | number     | optional     | Total execution time in milliseconds                   |
