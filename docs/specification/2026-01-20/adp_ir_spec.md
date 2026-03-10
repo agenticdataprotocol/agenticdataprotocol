@@ -61,7 +61,7 @@ Responses follow the standard JSON-RPC result or error format:
 - **Interaction:** Agent asks "How do I specifically use `com.acme.finance:bank_failures`?"
 - **Hypervisor Action:** Merges the **Semantic Manifest Schema** with **Access & Operational Policies**.
 - **Output:** A **Usage Contract** containing:
-  - **Fields:** Available fields with data types, masking status, and metadata.
+  - **Fields:** Available fields with data types and metadata.
   - **Capabilities:** Predicate capabilities (REQUIRED/OPTIONAL with allowed operators), projection fields, and mutable fields for WRITE operations.
 - **Policy Feedback:** The contract exposes `REQUIRED` predicates so the Agent knows which filters must be included.
 
@@ -120,7 +120,7 @@ sequenceDiagram
     alt is Valid and Policy Compliant
         H->>+B: Compiled backend query (with injected predicates)
         B-->>-H: Raw Result Set
-        H->>H: Apply Masking/Redaction & Operational Limits
+        H->>H: Apply Operational Limits
         H-->>A: ExecuteResult(results[], executionMetadata, nextCursor)
     else is Contract Violation
         H-->>-A: ValidateResult(valid: false, issues[BLOCKING])
@@ -144,7 +144,7 @@ All resources within the ADP ecosystem are addressed using a unique, structured 
 
 ### B2. Supported Intent Classes
 
-This table serves as the normative definition for all Agent interactions. Note that the intent class set has been rationalized from the draft spec — advanced read patterns (PATH, CORRELATE, SUMMARIZE) and advanced write patterns (MERGE, PRUNE) are now handled via composable intents at the application layer.
+This table serves as the normative definition for all Agent interactions. Note that the intent class set has been rationalized from the draft spec — advanced read patterns (PATH, CORRELATE, SUMMARIZE) and advanced write patterns (MERGE, PRUNE) are not supported.
 
 | **Category** | **Intent Class** | **Purpose**                                  | **Logic Mechanism**    | **Expected Output**  |
 | ------------ | ---------------- | -------------------------------------------- | ---------------------- | -------------------- |
@@ -283,10 +283,6 @@ resources:
           type: "STRING"
           description: "Long-form narrative of the failure event."
           isSearchable: true
-        - fieldId: "routing_number"
-          type: "STRING"
-          description: "ABA Routing Number"
-          isMasked: true
 ```
 
 **Field types:** `STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `TIMESTAMP`, `BLOB`, `JSON`, `VECTOR`
@@ -508,12 +504,6 @@ policies:
           }
         },
         {
-          "fieldId": "routing_number",
-          "type": "STRING",
-          "description": "ABA Routing Number",
-          "isMasked": true
-        },
-        {
           "fieldId": "failure_summary",
           "type": "STRING",
           "description": "Long-form narrative of the failure event.",
@@ -563,7 +553,6 @@ policies:
 - **Constraint Application**: The AI looks at `metadata` to understand "How" to format values.
 - **Role Assignment**: The AI looks at `capabilities` to understand "Can I use this field?"
   - If `intentClass` is `QUERY` or `LOOKUP`, the `mutables` list is informational only.
-  - If `isMasked: true`, inform the user that sensitive data will be redacted.
 
 | **Attribute**            | **Normative Definition**                                             | **AI Interpretation**                                                             |
 | ------------------------ | -------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -571,7 +560,6 @@ policies:
 | **`format`**             | Specifies the lexical representation (e.g., `YYYY-MM-DD`).           | "Cast my input variable to this string format before serializing JSON."           |
 | **`cardinality`**        | A hint about the number of unique values in the field.               | "If low (e.g., < 20), use a categorical picker. If high, use a text search."      |
 | **`whitelistOnly`**      | If `true`, only values from `samples` are valid.                     | "Validate the user input against `samples` before calling `adp.execute`."         |
-| **`isMasked: true`**     | Field exists but is redacted by policy.                              | "Do not include in the `projections` list."                                       |
 | **`isSearchable: true`** | Field supports the `SIMILAR` operator for semantic/vector search.    | "Use `SIMILAR` operator with a `SimilarValue` for semantic queries."              |
 
 ---
@@ -740,7 +728,6 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
 | **2. Map User Data**        | Bind user input to the specific `fieldId` names.          | User prompt + `adp.describe → usageContract.fields` |
 | **3. Lexical Formatting**   | Format values (e.g., cast date to `YYYY-MM-DD`).          | `adp.describe → fields[n].metadata.format`     |
 | **4. Whitelist Check**      | Verify values against `samples` if `whitelistOnly: true`. | `adp.describe → fields[n].metadata.samples`    |
-| **5. Projection Selection** | Exclude fields where `isMasked: true`.                    | `adp.describe → usageContract.fields`          |
 
 ### G4. adp.execute IR Specification
 
@@ -811,7 +798,7 @@ This translates to: `state_code = 'CA' AND (assets > 1B OR assets < 5M) AND NOT 
 | **Presence**    | All `REQUIRED` predicates must exist.         | Validation issue: `MISSING_REQUIRED_PREDICATE`  |
 | **Integrity**   | `fieldId` must be in the usage contract.      | Validation issue: `FIELD_NOT_FOUND`             |
 | **Format**      | `value` must match the `format` hint.         | Validation issue: `INVALID_FORMAT`              |
-| **Projection**  | `projections` must NOT include `isMasked` fields. | Validation issue: `FIELD_NOT_PERMITTED`     |
+| **Projection**  | `projections` must only include fields accessible to the role. | Validation issue: `FIELD_NOT_PERMITTED`     |
 | **Operator**    | `op` must be in the field's allowed operators.| Validation issue: `INVALID_OPERATOR`            |
 | **Cardinality** | `IN` clause or `limit` may not exceed bounds. | Validation issue: `CARDINALITY_EXCEEDED`        |
 
@@ -847,7 +834,7 @@ The input wraps the same `Intent IR` used in `adp.execute`.
           { "fieldId": "closing_date", "op": "GT", "value": "23-01-01" }
         ]
       },
-      "projections": ["bank_name", "routing_number"]
+      "projections": ["bank_name", "closing_date"]
     }
   }
 }
@@ -875,12 +862,6 @@ The input wraps the same `Intent IR` used in `adp.execute`.
         "field": "closing_date",
         "message": "Value '23-01-01' does not match required format YYYY-MM-DD.",
         "correctionHint": "Reformat the date as '2023-01-01'."
-      },
-      {
-        "code": "FIELD_NOT_PERMITTED",
-        "severity": "WARNING",
-        "field": "routing_number",
-        "message": "Field 'routing_number' is masked and will be ignored in the result set."
       }
     ]
   }
@@ -893,14 +874,14 @@ The input wraps the same `Intent IR` used in `adp.execute`.
 | --------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
 | **Contractual** | Are all `REQUIRED` predicates present?                     | Re-read `adp.describe` result and find the missing predicate. |
 | **Syntactic**   | Do values match the `format` (e.g., Date vs. String)?      | Re-format the value string (e.g., cast to ISO 8601).         |
-| **Policy**      | Is the Agent allowed to see the requested `projections`?   | Remove offending fields (those with `isMasked: true`).       |
+| **Policy**      | Is the Agent allowed to see the requested `projections`?   | Remove fields not permitted by the access policy.            |
 | **Operator**    | Is the operator in the field's `operators` list?           | Switch to an allowed operator from the usage contract.       |
 | **Cardinality** | Is the `IN` clause too large or the `limit` too high?      | Narrow the search or reduce the `limit` parameter.           |
 
 ### H4. Issue Severity Levels
 
 - **`BLOCKING`**: Execution will fail. The Agent _must_ fix this before calling `adp.execute`.
-- **`WARNING`**: Execution will proceed, but data may be truncated, masked, or different than expected.
+- **`WARNING`**: Execution will proceed, but data may be truncated or different than expected.
 
 ### H5. Validation Issue Codes
 
@@ -908,7 +889,7 @@ The input wraps the same `Intent IR` used in `adp.execute`.
 | --------------------------- | ----------------------------------------------- |
 | `MISSING_REQUIRED_PREDICATE`| A required predicate is absent from the intent. |
 | `FIELD_NOT_FOUND`           | The `fieldId` does not exist in the resource.   |
-| `FIELD_NOT_PERMITTED`       | The field is masked or not accessible.          |
+| `FIELD_NOT_PERMITTED`       | The field is not accessible to the requesting role. |
 | `INVALID_OPERATOR`          | The operator is not allowed for this field.     |
 | `INVALID_VALUE`             | The value type doesn't match the field type.    |
 | `INVALID_FORMAT`            | The value format doesn't match the format hint. |
